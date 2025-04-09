@@ -1,88 +1,76 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>NOVA X</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
-</head>
-<body>
-  <div class="chat-container">
-    <h2 class="glow-title">NOVA X - Personal Assistant</h2>
+// 📎 Toggle file select modal
+const attachmentBtn = document.getElementById("attachment-button");
+const fileModal = document.getElementById("file-select-modal");
+const selectPDF = document.getElementById("select-pdf");
+const selectImage = document.getElementById("select-image");
 
-    <div id="chat-box" class="chat-box">
-      <div class="ai-message">
-        <strong>NOVA X:</strong> Hello! I'm Nova X, your AI assistant. How can I help you today?
-      </div>
-    </div>
+attachmentBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  fileModal.classList.toggle("hidden");
+});
 
-    <div class="input-container">
-      <input type="text" id="user-input" placeholder="Type a message..." />
+document.addEventListener("click", (e) => {
+  if (!attachmentBtn.contains(e.target)) {
+    fileModal.classList.add("hidden");
+  }
+});
 
-      <!-- 📎 Attachment -->
-      <div class="attachment-wrapper">
-        <button id="attachment-button" class="attachment-button" title="Upload">
-          <i class="fas fa-paperclip"></i>
-        </button>
-        <div id="file-select-modal" class="file-select-modal hidden">
-          <p>Select File Type</p>
-          <button id="select-pdf">Upload PDF</button>
-          <button id="select-image">Upload Image</button>
-        </div>
-      </div>
+// 📄 PDF Upload
+selectPDF.addEventListener("click", () => {
+  fileModal.classList.add("hidden");
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/pdf";
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("pdf", file);
+    addMessage("Nova X", "📄 Processing PDF...");
+    try {
+      const res = await fetch("https://nova-x-v2-backend.onrender.com/pdf", {
+        method: "POST",
+        body: formData
+      });
+      const result = await res.json();
+      const summaryPrompt = `Summarize this PDF:\n\n${result.text.slice(0, 3000)}`;
+      const chatRes = await fetch("https://nova-x-v2-backend.onrender.com/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: summaryPrompt })
+      });
+      const data = await chatRes.json();
+      addMessage("Nova X", data.response);
+    } catch {
+      addMessage("Nova X", "❌ Failed to process PDF.");
+    }
+  };
+  input.click();
+});
 
-      <!-- 🎙️ Mic -->
-      <div class="mic-wrapper">
-        <button id="mic-button"><i class="fas fa-microphone"></i></button>
-        <div class="waveform hidden" id="waveform">
-          <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
-        </div>
-      </div>
-
-      <button id="send-button">Send</button>
-    </div>
-  </div>
-
-  <!-- ❔ Help Panel -->
-  <button id="help-button" title="Help">❔</button>
-  <div id="help-panel" class="hidden">
-    <h2>How to Use Nova X</h2>
-    <ul>
-      <li><strong>Chat:</strong> Type and press Send.</li>
-      <li><strong>Voice:</strong> Click 🎙️ and speak.</li>
-      <li><strong>Upload:</strong> Click 📎 for PDF/image.</li>
-      <li><strong>Search:</strong> Try <code>search AI tools</code>.</li>
-      <li><strong>News:</strong> Try <code>news about tech</code>.</li>
-      <li><strong>Tasks:</strong> Try <code>add task Study</code>.</li>
-      <li><strong>Weather:</strong> Try <code>weather in London</code>.</li>
-    </ul>
-  </div>
-
-  <!-- 📝 Assistant Panel -->
-  <button id="todo-panel-toggle">Tasks</button>
-  <div id="assistant-panel" class="hidden">
-    <div class="panel-header">
-      <h3>Assistant Panel</h3>
-      <button id="close-assistant">&times;</button>
-    </div>
-    <div class="panel-tabs">
-      <button class="tab-button active" data-tab="tasks">Tasks</button>
-      <button class="tab-button" data-tab="reminders">Reminders</button>
-    </div>
-    <div id="tasks" class="panel-section">
-      <input type="text" id="task-input" placeholder="Enter a new task" />
-      <button id="add-task">Add Task</button>
-      <ul id="task-list" class="task-list"></ul>
-    </div>
-    <div id="reminders" class="panel-section hidden">
-      <input type="text" id="reminder-input" placeholder="Enter a reminder" />
-      <button id="add-reminder">Add Reminder</button>
-      <ul id="reminder-list" class="task-list"></ul>
-    </div>
-  </div>
-
-  <script src="script.js"></script>
-</body>
-</html>
+// 🖼️ Image Upload
+selectImage.addEventListener("click", () => {
+  fileModal.classList.add("hidden");
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    addMessage("Nova X", "🖼️ Extracting text from image...");
+    try {
+      const { data: { text } } = await Tesseract.recognize(file, 'eng');
+      const summaryPrompt = `Analyze this image:\n\n${text}`;
+      const chatRes = await fetch("https://nova-x-v2-backend.onrender.com/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: summaryPrompt })
+      });
+      const data = await chatRes.json();
+      addMessage("Nova X", data.response);
+    } catch {
+      addMessage("Nova X", "❌ OCR failed.");
+    }
+  };
+  input.click();
+});
