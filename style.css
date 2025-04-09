@@ -447,4 +447,44 @@ li button {
 #close-assistant:hover {
   color: #fff;
 }
+/* --- Attachment Dropdown Modal --- */
+.file-select-modal {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  background-color: #1e1e1e;
+  border: 1px solid #444;
+  padding: 10px;
+  border-radius: 6px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.6);
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 999;
+  width: 150px;
+}
+
+.file-select-modal p {
+  margin: 0 0 8px 0;
+  color: #ffffff;
+  font-size: 14px;
+  text-align: center;
+  border-bottom: 1px solid #444;
+  padding-bottom: 4px;
+}
+
+.file-select-modal button {
+  background-color: #007bff;
+  border: none;
+  color: white;
+  padding: 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.file-select-modal button:hover {
+  background-color: #0056b3;
+}
 
