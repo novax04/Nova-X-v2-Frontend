@@ -7,6 +7,38 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
+  <style>
+    /* Just in case it's missing in your style.css */
+    .hidden { display: none; }
+    .file-select-modal {
+      position: absolute;
+      background: #1f1f1f;
+      border: 1px solid #444;
+      padding: 10px;
+      border-radius: 8px;
+      top: 40px;
+      right: 0;
+      z-index: 100;
+    }
+    .file-select-modal p {
+      margin: 0 0 5px;
+      color: white;
+    }
+    .file-select-modal button {
+      display: block;
+      margin-top: 5px;
+      width: 100%;
+      background: #333;
+      color: #fff;
+      border: none;
+      padding: 6px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .attachment-wrapper {
+      position: relative;
+    }
+  </style>
 </head>
 <body>
   <div class="chat-container">
@@ -89,5 +121,47 @@
   </div>
 
   <script src="script.js"></script>
+
+  <script>
+    // Toggle modal
+    document.addEventListener("DOMContentLoaded", () => {
+      const attachmentButton = document.getElementById("attachment-button");
+      const fileModal = document.getElementById("file-select-modal");
+
+      attachmentButton.addEventListener("click", (e) => {
+        e.stopPropagation();
+        fileModal.classList.toggle("hidden");
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!attachmentButton.contains(e.target)) {
+          fileModal.classList.add("hidden");
+        }
+      });
+
+      // Triggers for actual file selection (PDF/Image)
+      document.getElementById("select-pdf").addEventListener("click", () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "application/pdf";
+        input.onchange = () => {
+          const file = input.files[0];
+          if (file) processPDF(file);
+        };
+        input.click();
+      });
+
+      document.getElementById("select-image").addEventListener("click", () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.onchange = () => {
+          const file = input.files[0];
+          if (file) processImage(file);
+        };
+        input.click();
+      });
+    });
+  </script>
 </body>
 </html>
