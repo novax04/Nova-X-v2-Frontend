@@ -35,9 +35,15 @@
 
       <!-- 🎙️ Voice Input -->
       <div class="mic-wrapper">
-        <button id="mic-button"><i class="fas fa-microphone"></i></button>
+        <button id="mic-button" title="Start voice input">
+          <i class="fas fa-microphone"></i>
+        </button>
         <div class="waveform hidden" id="waveform">
-          <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
         </div>
       </div>
 
@@ -53,7 +59,7 @@
       <li><strong>Chat:</strong> Type your question and click Send or hit Enter.</li>
       <li><strong>Voice Input:</strong> Click the 🎙️ mic button and speak.</li>
       <li><strong>Upload:</strong> Click 📎 to upload PDF/image for analysis.</li>
-      <li><strong>Search the Web:</strong> Type <code>search your query</code>.</li>
+      <li><strong>Search:</strong> Type <code>search your query</code>.</li>
       <li><strong>News:</strong> Try <code>news in Canada</code> or <code>news about AI</code>.</li>
       <li><strong>Tasks:</strong> Use <code>add task Clean room</code> or manage via Tasks tab.</li>
       <li><strong>Reminder:</strong> Use <code>remind me to call at 2pm</code>.</li>
@@ -61,13 +67,13 @@
     </ul>
   </div>
 
-  <!-- ✅ Assistant Panel (Tasks + Reminders) -->
-  <button id="todo-panel-toggle">Tasks</button>
+  <!-- ✅ Assistant Panel -->
+  <button id="todo-panel-toggle" title="Open Tasks & Reminders">Tasks</button>
 
   <div id="assistant-panel" class="hidden">
     <div class="panel-header">
       <h3>Assistant Panel</h3>
-      <button id="close-assistant">&times;</button>
+      <button id="close-assistant" title="Close">&times;</button>
     </div>
 
     <div class="panel-tabs">
