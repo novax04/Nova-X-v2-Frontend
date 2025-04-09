@@ -1,301 +1,244 @@
-const backendURL = "https://nova-x-v2-backend.onrender.com/chat";
-
-function showTab(tabName) {
-    document.querySelectorAll(".panel-section").forEach(panel => {
-        panel.style.display = "none";
-    });
-    document.querySelectorAll(".tab-button").forEach(button => {
-        button.classList.remove("active");
-    });
-    document.getElementById(tabName).style.display = "block";
-    document.querySelector(`.tab-button[data-tab="${tabName}"]`).classList.add("active");
-}
-
-function addTask() {
-    const taskInput = document.getElementById("task-input");
-    const taskList = document.getElementById("task-list");
-
-    if (taskInput.value.trim()) {
-        const li = document.createElement("li");
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        const span = document.createElement("span");
-        span.textContent = taskInput.value.trim();
-        const deleteButton = document.createElement("button");
-        deleteButton.textContent = "🗑️";
-        deleteButton.onclick = () => taskList.removeChild(li);
-
-        li.appendChild(checkbox);
-        li.appendChild(span);
-        li.appendChild(deleteButton);
-        taskList.appendChild(li);
-
-        taskInput.value = "";
-    }
-}
-
-function addReminder() {
-    const reminderInput = document.getElementById("reminder-input");
-    const reminderList = document.getElementById("reminder-list");
-
-    if (reminderInput.value.trim()) {
-        const li = document.createElement("li");
-        li.textContent = reminderInput.value.trim();
-        reminderList.appendChild(li);
-        reminderInput.value = "";
-    }
-}
-
 document.addEventListener("DOMContentLoaded", () => {
-    const userInput = document.getElementById("user-input");
-    const chatBox = document.getElementById("chat-box");
-    const sendButton = document.getElementById("send-button");
-    const micButton = document.getElementById("mic-button");
-    const waveform = document.getElementById("waveform");
+  const chatBox = document.getElementById("chat-box");
+  const userInput = document.getElementById("user-input");
+  const sendButton = document.getElementById("send-button");
+  const micButton = document.getElementById("mic-button");
+  const waveform = document.getElementById("waveform");
+  const helpButton = document.getElementById("help-button");
+  const helpPanel = document.getElementById("help-panel");
+  const attachmentButton = document.getElementById("attachment-button");
+  const fileInput = document.getElementById("file-input");
+  const fileSelectModal = document.getElementById("file-select-modal");
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
+  const backendBase = "https://nova-x-v2-backend.onrender.com";
+
+  // Send user message
+  const sendMessage = async () => {
+    const message = userInput.value.trim();
+    if (!message) return;
+    addMessage("You", message, "user-message");
+    userInput.value = "";
+
+    addMessage("Nova X", "🧠 Thinking...");
+
+    try {
+      const res = await fetch(`${backendBase}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      });
+
+      const data = await res.json();
+      updateLastMessage(`🧠 ${data.response || "No response."}`);
+    } catch (err) {
+      console.error(err);
+      updateLastMessage("❌ Error processing your request.");
+    }
+  };
+
+  sendButton.addEventListener("click", sendMessage);
+  userInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") sendMessage();
+  });
+
+  // Add message to chat
+  function addMessage(sender, text, className = "ai-message") {
+    const msg = document.createElement("div");
+    msg.classList.add("message", className);
+    msg.innerHTML = `<strong>${sender}:</strong> ${text.replace(/\n/g, "<br>")}`;
+    chatBox.appendChild(msg);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function updateLastMessage(text) {
+    const messages = chatBox.querySelectorAll(".message");
+    const last = messages[messages.length - 1];
+    if (last) last.innerHTML = `<strong>Nova X:</strong> ${text.replace(/\n/g, "<br>")}`;
+  }
+
+  // Voice input
+  let recognition;
+  micButton.addEventListener("click", () => {
+    if (!('webkitSpeechRecognition' in window)) {
+      alert("Speech recognition not supported.");
+      return;
+    }
+
+    recognition = new webkitSpeechRecognition();
     recognition.lang = "en-US";
+    recognition.start();
+    waveform.classList.remove("hidden");
 
-    let isRecording = false;
-
-    micButton.addEventListener("click", () => {
-        if (isRecording) recognition.stop();
-        else recognition.start();
-
-        isRecording = !isRecording;
-        micButton.classList.toggle("active", isRecording);
-        waveform.style.display = isRecording ? "flex" : "none";
-    });
-
-    recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        userInput.value = transcript;
-        stopRecordingUI();
-        sendMessage();
+    recognition.onresult = event => {
+      const transcript = event.results[0][0].transcript;
+      userInput.value = transcript;
+      waveform.classList.add("hidden");
+      sendMessage();
     };
 
-    recognition.onspeechend = stopRecordingUI;
-    recognition.onerror = (event) => {
-        addMessage("Nova X", `⚠️ Speech recognition error: ${event.error}`, "ai-message");
-        stopRecordingUI();
+    recognition.onerror = () => {
+      waveform.classList.add("hidden");
     };
+  });
 
-    function stopRecordingUI() {
-        isRecording = false;
-        micButton.classList.remove("active");
-        waveform.style.display = "none";
-    }
+  // Help toggle
+  helpButton.addEventListener("click", () => {
+    helpPanel.classList.toggle("hidden");
+  });
 
-    sendButton.addEventListener("click", sendMessage);
-    userInput.addEventListener("keypress", (event) => {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            sendMessage();
-        }
-    });
+  // File upload modal
+  attachmentButton.addEventListener("click", () => {
+    fileSelectModal.classList.remove("hidden");
+  });
 
-    async function sendMessage() {
-        const message = userInput.value.trim();
-        if (!message) return;
+  document.getElementById("select-pdf").addEventListener("click", () => {
+    fileInput.setAttribute("accept", ".pdf");
+    fileSelectModal.classList.add("hidden");
+    fileInput.click();
+  });
 
-        addMessage("You", message, "user-message");
-        userInput.value = "";
+  document.getElementById("select-image").addEventListener("click", () => {
+    fileInput.setAttribute("accept", "image/*");
+    fileSelectModal.classList.add("hidden");
+    fileInput.click();
+  });
 
-        const loader = document.createElement("div");
-        loader.classList.add("typing-indicator");
-        loader.innerHTML = "<span></span><span></span><span></span>";
-        chatBox.appendChild(loader);
-        chatBox.scrollTop = chatBox.scrollHeight;
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
 
-        const lowerCaseMessage = message.toLowerCase();
+    const fileType = file.type;
 
-        if (lowerCaseMessage.startsWith("search ")) {
-            const query = lowerCaseMessage.replace(/^search /i, "");
-            const results = await searchWeb(query);
-            chatBox.removeChild(loader);
-            addMessage("Nova X", "🔎 Search results:", "ai-message");
-            const formatted = results.map(r =>
-                typeof r === 'string'
-                    ? `<div>${r}</div>`
-                    : `<div class="ai-message"><a href="${unwrapDuckDuckGoURL(r.url)}" target="_blank"><strong>${r.title}</strong></a></div>`
-            ).join('');
-            chatBox.innerHTML += formatted;
-            chatBox.scrollTop = chatBox.scrollHeight;
-            return;
-        }
+    if (fileType === "application/pdf") {
+      addMessage("Nova X", "📄 Uploading PDF for analysis...");
+      const formData = new FormData();
+      formData.append("pdf", file);
 
-        if (lowerCaseMessage.includes("news in")) {
-            const country = lowerCaseMessage.replace("news in", "").trim();
-            await fetchNewsByCountry(country);
-            chatBox.removeChild(loader);
-            return;
-        }
-
-        if (lowerCaseMessage.includes("news about")) {
-            const topic = lowerCaseMessage.replace("news about", "").trim();
-            await fetchNewsByTopic(topic);
-            chatBox.removeChild(loader);
-            return;
-        }
-
-        if (lowerCaseMessage.includes("weather in")) {
-            const city = lowerCaseMessage.replace("weather in", "").trim();
-            await getWeatherByCity(city);
-            chatBox.removeChild(loader);
-            return;
-        }
-
-        if (lowerCaseMessage.includes("weather") || lowerCaseMessage.includes("temperature")) {
-            getLocation();
-            chatBox.removeChild(loader);
-            return;
-        }
-
-        try {
-            const response = await fetch(backendURL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message })
-            });
-
-            const data = await response.json();
-            chatBox.removeChild(loader);
-            addMessage("Nova X", data.response, "ai-message");
-        } catch (err) {
-            chatBox.removeChild(loader);
-            addMessage("Nova X", "⚠️ Error getting response from backend.", "ai-message");
-        }
-    }
-
-    function addMessage(sender, text, className = "ai-message") {
-        const msg = document.createElement("div");
-        msg.classList.add("message", className);
-        msg.innerHTML = `<strong>${sender}:</strong> ${text.replace(/\n/g, "<br>")}`;
-        chatBox.appendChild(msg);
-        chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    async function searchWeb(query) {
-        const res = await fetch("https://nova-x-7akw.onrender.com/search-web", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query })
+      try {
+        const res = await fetch(`${backendBase}/pdf`, {
+          method: "POST",
+          body: formData
         });
         const data = await res.json();
-        return data.results;
-    }
+        addMessage("Nova X", `📑 PDF Summary:\n\n${data.summary || "No summary returned."}`);
+      } catch (err) {
+        console.error(err);
+        addMessage("Nova X", "❌ Error analyzing PDF.");
+      }
 
-    function unwrapDuckDuckGoURL(wrappedUrl) {
-        const match = wrappedUrl.match(/uddg=([^&]+)/);
-        return match ? decodeURIComponent(match[1]) : wrappedUrl;
-    }
+    } else if (fileType.startsWith("image/")) {
+      addMessage("Nova X", "🖼️ Extracting text from image...");
 
-    function getLocation() {
-        navigator.geolocation.getCurrentPosition(
-            pos => getWeather(pos.coords.latitude, pos.coords.longitude),
-            () => addMessage("Nova X", "⚠️ Location access denied.", "ai-message")
-        );
-    }
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const imageData = reader.result;
 
-    async function getWeather(lat, lon) {
-        const apiKey = "9f3002b2622c489d9cf133330251803";
-        const url = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${lat},${lon}`;
         try {
-            const res = await fetch(url);
-            const data = await res.json();
-            addMessage("Nova X", `🌤️ ${data.location.name}: ${data.current.condition.text}, ${data.current.temp_c}°C`);
-        } catch {
-            addMessage("Nova X", "⚠️ Error getting weather.");
-        }
-    }
+          const { data: { text } } = await Tesseract.recognize(imageData, 'eng');
 
-    async function getWeatherByCity(city) {
-        const apiKey = "9f3002b2622c489d9cf133330251803";
-        const url = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(city)}`;
-        try {
-            const res = await fetch(url);
-            const data = await res.json();
-            addMessage("Nova X", `🌤️ ${data.location.name}: ${data.current.condition.text}, ${data.current.temp_c}°C`);
-        } catch {
-            addMessage("Nova X", "⚠️ Error getting weather.");
-        }
-    }
-
-    async function fetchNewsByCountry(country) {
-        try {
-            const res = await fetch(`https://nova-x-7akw.onrender.com/news/country?country=${country}`);
-            const data = await res.json();
-            addMessage("Nova X", data.response);
-        } catch {
-            addMessage("Nova X", "⚠️ Error getting news.");
-        }
-    }
-
-    async function fetchNewsByTopic(topic) {
-        try {
-            const res = await fetch(`https://nova-x-7akw.onrender.com/news/topic?topic=${topic}`);
-            const data = await res.json();
-            addMessage("Nova X", data.response);
-        } catch {
-            addMessage("Nova X", "⚠️ Error getting news.");
-        }
-    }
-
-    document.getElementById("help-button").addEventListener("click", () => {
-        const panel = document.getElementById("help-panel");
-        panel.style.display = panel.style.display === "block" ? "none" : "block";
-    });
-
-    document.getElementById("todo-panel-toggle").addEventListener("click", () => {
-        document.getElementById("assistant-panel").style.display = "block";
-    });
-
-    document.getElementById("close-assistant").addEventListener("click", () => {
-        document.getElementById("assistant-panel").style.display = "none";
-    });
-
-    document.querySelectorAll(".tab-button").forEach(button => {
-        button.addEventListener("click", () => {
-            showTab(button.dataset.tab);
-        });
-    });
-
-    document.getElementById("add-task").addEventListener("click", addTask);
-    document.getElementById("add-reminder").addEventListener("click", addReminder);
-
-    document.getElementById("pdf-upload").addEventListener("change", async function () {
-        const file = this.files[0];
-        if (!file || file.type !== "application/pdf") {
-            addMessage("Nova X", "⚠️ Please upload a valid PDF file.");
+          if (!text.trim()) {
+            addMessage("Nova X", "❌ No text found in the image.");
             return;
-        }
+          }
 
-        addMessage("Nova X", "📄 Processing PDF...");
-        const formData = new FormData();
-        formData.append("pdf", file);
+          addMessage("Nova X", `🔍 Extracted Text:\n\n${text.trim()}`);
 
-        try {
-            const response = await fetch("https://nova-x-7akw.onrender.com/pdf", {
-                method: "POST",
-                body: formData,
-            });
-            const result = await response.json();
-            if (result.text) {
-                const summaryPrompt = `Summarize this PDF:\n\n${result.text.slice(0, 3000)}`;
-                const chatRes = await fetch(backendURL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: summaryPrompt }),
-                });
-                const chatData = await chatRes.json();
-                addMessage("Nova X", chatData.response);
-            } else {
-                addMessage("Nova X", "❌ No text found in PDF.");
-            }
-        } catch {
-            addMessage("Nova X", "❌ Error processing the PDF.");
+          // Summarize the extracted text
+          addMessage("Nova X", "🧠 Summarizing extracted text...");
+          const summaryRes = await fetch(`${backendBase}/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: `Summarize this:\n\n${text.trim()}` })
+          });
+
+          const summaryData = await summaryRes.json();
+          addMessage("Nova X", `📝 Summary:\n\n${summaryData.response || "No summary returned."}`);
+        } catch (err) {
+          console.error(err);
+          addMessage("Nova X", "❌ Error analyzing the image.");
         }
+      };
+      reader.readAsDataURL(file);
+    } else {
+      addMessage("Nova X", "⚠️ Unsupported file type.");
+    }
+
+    fileInput.value = '';
+  });
+
+  // Assistant panel tabs (Tasks & Reminders)
+  const tabButtons = document.querySelectorAll(".tab-button");
+  const tabSections = document.querySelectorAll(".panel-section");
+
+  tabButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      tabButtons.forEach(btn => btn.classList.remove("active"));
+      tabSections.forEach(sec => sec.classList.add("hidden"));
+
+      button.classList.add("active");
+      document.getElementById(button.dataset.tab).classList.remove("hidden");
     });
+  });
+
+  // Tasks
+  document.getElementById("add-task").addEventListener("click", () => {
+    const input = document.getElementById("task-input");
+    const text = input.value.trim();
+    if (!text) return;
+
+    const li = document.createElement("li");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    const span = document.createElement("span");
+    span.textContent = text;
+    const del = document.createElement("button");
+    del.textContent = "🗑️";
+    del.addEventListener("click", () => li.remove());
+
+    li.appendChild(checkbox);
+    li.appendChild(span);
+    li.appendChild(del);
+    document.getElementById("task-list").appendChild(li);
+    input.value = "";
+  });
+
+  // Reminders
+  document.getElementById("add-reminder").addEventListener("click", () => {
+    const input = document.getElementById("reminder-input");
+    const text = input.value.trim();
+    if (!text) return;
+
+    const match = text.match(/(.+)\s+at\s+(\d{1,2}:\d{2})/i);
+    if (!match) {
+      alert("Use format: Do something at HH:MM");
+      return;
+    }
+
+    const [_, task, time] = match;
+    const li = document.createElement("li");
+    li.textContent = `${task} at ${time}`;
+    document.getElementById("reminder-list").appendChild(li);
+
+    const now = new Date();
+    const [hours, minutes] = time.split(":").map(Number);
+    const remindTime = new Date();
+    remindTime.setHours(hours, minutes, 0, 0);
+
+    let delay = remindTime - now;
+    if (delay < 0) delay += 86400000;
+
+    setTimeout(() => {
+      alert(`⏰ Reminder: ${task}`);
+    }, delay);
+
+    input.value = "";
+  });
+
+  // Toggle assistant panel
+  document.getElementById("close-assistant").addEventListener("click", () => {
+    document.getElementById("assistant-panel").classList.toggle("hidden");
+  });
+
+  // Optional: Open assistant panel automatically
+  // document.getElementById("assistant-panel").classList.remove("hidden");
 });
