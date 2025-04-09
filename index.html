@@ -4,78 +4,73 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>NOVA X</title>
-
-  <!-- Styles -->
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
 </head>
 <body>
   <div class="chat-container">
     <h2 class="glow-title">NOVA X - Personal Assistant</h2>
 
-    <!-- Chat Box -->
     <div id="chat-box" class="chat-box">
       <div class="ai-message">
         <strong>NOVA X:</strong> Hello! I'm Nova X, your AI assistant. How can I help you today?
       </div>
     </div>
 
-    <!-- Input + Controls -->
     <div class="input-container">
-      <!-- Text input -->
       <input type="text" id="user-input" placeholder="Type a message..." />
 
-      <!-- 📎 Unified Attachment Button for PDF & Image -->
+      <!-- Attachment Button -->
       <div class="attachment-wrapper">
-        <label for="file-input" class="attachment-button" title="Attach PDF or Image">
+        <button id="attachment-button" class="attachment-button" title="Upload">
           <i class="fas fa-paperclip"></i>
-        </label>
-        <input type="file" id="file-input" accept=".pdf,image/*" hidden />
+        </button>
+        <input type="file" id="file-input" hidden />
       </div>
 
       <!-- Microphone -->
       <div class="mic-wrapper">
-        <button id="mic-button">
-          <i class="fas fa-microphone"></i>
-        </button>
-        <div class="waveform" id="waveform">
-          <div class="bar"></div>
-          <div class="bar"></div>
-          <div class="bar"></div>
-          <div class="bar"></div>
-          <div class="bar"></div>
+        <button id="mic-button"><i class="fas fa-microphone"></i></button>
+        <div class="waveform hidden" id="waveform">
+          <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
         </div>
       </div>
 
-      <!-- Send Button -->
       <button id="send-button">Send</button>
     </div>
   </div>
-  
-  <!-- Help Button -->
-  <button id="help-button" title="Help">❔</button>
 
-  <!-- Help Panel (Initially Hidden) -->
-  <div id="help-panel">
+  <!-- Help Button & Panel -->
+  <button id="help-button" title="Help">❔</button>
+  <div id="help-panel" class="hidden">
     <h2>How to Use Nova X</h2>
     <ul>
-      <li><strong>Chat:</strong> Type your question and hit Enter or click Send.</li>
+      <li><strong>Chat:</strong> Type your question and click Send or hit Enter.</li>
       <li><strong>Voice Input:</strong> Click the 🎙️ mic button and speak.</li>
-      <li><strong>PDF/Image Summarizer:</strong> Click 📎 (Attach) to upload a PDF or image. Nova X will analyze it.</li>
-      <li><strong>Search the Web:</strong> Type <code>search your query</code> to get web results via DuckDuckGo.</li>
-      <li><strong>News by Country:</strong> Say <code>news in India</code> or any other country.</li>
-      <li><strong>News by Topic:</strong> Try <code>news about AI</code> for specific topics.</li>
-      <li><strong>Task:</strong> Add tasks using <code>add task Buy groceries</code>. Manage them in the Tasks tab.</li>
-      <li><strong>Reminder:</strong> Set reminders like <code>remind me to call John at 5pm</code></li>
-      <li><strong>Weather by City:</strong> Say <code>weather in Tokyo</code> or just <code>weather</code> for your current location.</li>
+      <li><strong>Upload:</strong> Click 📎 to upload PDF/image for analysis.</li>
+      <li><strong>Search the Web:</strong> Type <code>search your query</code>.</li>
+      <li><strong>News:</strong> Try <code>news in Canada</code> or <code>news about AI</code>.</li>
+      <li><strong>Tasks:</strong> Use <code>add task Clean room</code> or manage via Tasks tab.</li>
+      <li><strong>Reminder:</strong> Use <code>remind me to call at 2pm</code>.</li>
+      <li><strong>Weather:</strong> Ask for <code>weather in New York</code>.</li>
     </ul>
+  </div>
+
+  <!-- File Select Modal -->
+  <div id="file-select-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Select File Type</h3>
+      <button id="select-pdf">Upload PDF</button>
+      <button id="select-image">Upload Image</button>
+    </div>
   </div>
 
   <!-- Assistant Panel Toggle -->
   <button id="todo-panel-toggle">Tasks</button>
 
   <!-- Assistant Panel -->
-  <div id="assistant-panel">
+  <div id="assistant-panel" class="hidden">
     <div class="panel-header">
       <h3>Assistant Panel</h3>
       <button id="close-assistant">&times;</button>
@@ -86,22 +81,20 @@
       <button class="tab-button" data-tab="reminders">Reminders</button>
     </div>
 
-    <!-- Tasks Section -->
-    <div id="tasks" class="panel-section" style="display: block;">
+    <div id="tasks" class="panel-section">
       <input type="text" id="task-input" placeholder="Enter a new task" />
       <button id="add-task">Add Task</button>
       <ul id="task-list" class="task-list"></ul>
     </div>
 
-    <!-- Reminders Section -->
-    <div id="reminders" class="panel-section" style="display: none;">
+    <div id="reminders" class="panel-section hidden">
       <input type="text" id="reminder-input" placeholder="Enter a reminder (e.g., Call John at 3pm)" />
       <button id="add-reminder">Add Reminder</button>
       <ul id="reminder-list" class="task-list"></ul>
     </div>
   </div>
 
-  <!-- Scripts -->
+  <!-- Main Script -->
   <script src="script.js"></script>
 </body>
 </html>
