@@ -292,19 +292,23 @@ document.getElementById("analyze-image-button").addEventListener("click", () => 
   input.onchange = async () => {
     const file = input.files[0];
     if (!file) return;
+
     addMessage("Nova X", "🖼️ Analyzing image...");
 
     try {
       const { data: { text } } = await Tesseract.recognize(file, "eng");
       const summaryPrompt = `Summarize this image content:\n\n${text}`;
-      const chatRes = await fetch(backendURL, {
+
+      const chatRes = await fetch("https://nova-x-v2-backend.onrender.com/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: summaryPrompt })
       });
+
       const data = await chatRes.json();
       addMessage("Nova X", data.response);
     } catch (err) {
+      console.error(err);
       addMessage("Nova X", "❌ Failed to extract or summarize image.");
     }
   };
