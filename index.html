@@ -1,100 +1,240 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>NOVA X</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
-</head>
-<body>
-  <div class="chat-container">
-    <h2 class="glow-title">NOVA X - Personal Assistant</h2>
+const backendURL = "https://nova-x-v2-backend.onrender.com/chat";
 
-    <div id="chat-box" class="chat-box">
-      <div class="ai-message">
-        <strong>NOVA X:</strong> Hello! I'm Nova X, your AI assistant. How can I help you today?
-      </div>
-    </div>
+document.addEventListener("DOMContentLoaded", () => {
+  const chatBox = document.getElementById("chat-box");
+  const userInput = document.getElementById("user-input");
+  const sendButton = document.getElementById("send-button");
+  const micButton = document.getElementById("mic-button");
+  const waveform = document.getElementById("waveform");
+  const helpButton = document.getElementById("help-button");
+  const helpPanel = document.getElementById("help-panel");
 
-    <div class="input-container">
-      <input type="text" id="user-input" placeholder="Type a message..." />
+  const taskInput = document.getElementById("task-input");
+  const addTaskButton = document.getElementById("add-task");
+  const taskList = document.getElementById("task-list");
 
-      <!-- Attachment Button -->
-      <div class="attachment-wrapper">
-        <button id="attachment-button" class="attachment-button" title="Upload">
-          <i class="fas fa-paperclip"></i>
-        </button>
-        <input type="file" id="file-input" hidden />
-      </div>
+  const reminderInput = document.getElementById("reminder-input");
+  const addReminderButton = document.getElementById("add-reminder");
+  const reminderList = document.getElementById("reminder-list");
 
-      <!-- Microphone -->
-      <div class="mic-wrapper">
-        <button id="mic-button"><i class="fas fa-microphone"></i></button>
-        <div class="waveform hidden" id="waveform">
-          <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
-        </div>
-      </div>
+  const todoPanelToggle = document.getElementById("todo-panel-toggle");
+  const assistantPanel = document.getElementById("assistant-panel");
+  const closeAssistant = document.getElementById("close-assistant");
 
-      <button id="send-button">Send</button>
-    </div>
-  </div>
+  const tabButtons = document.querySelectorAll(".tab-button");
+  const tabSections = document.querySelectorAll(".panel-section");
 
-  <!-- Help Button & Panel -->
-  <button id="help-button" title="Help">❔</button>
-  <div id="help-panel" class="hidden">
-    <h2>How to Use Nova X</h2>
-    <ul>
-      <li><strong>Chat:</strong> Type your question and click Send or hit Enter.</li>
-      <li><strong>Voice Input:</strong> Click the 🎙️ mic button and speak.</li>
-      <li><strong>Upload:</strong> Click 📎 to upload PDF/image for analysis.</li>
-      <li><strong>Search the Web:</strong> Type <code>search your query</code>.</li>
-      <li><strong>News:</strong> Try <code>news in Canada</code> or <code>news about AI</code>.</li>
-      <li><strong>Tasks:</strong> Use <code>add task Clean room</code> or manage via Tasks tab.</li>
-      <li><strong>Reminder:</strong> Use <code>remind me to call at 2pm</code>.</li>
-      <li><strong>Weather:</strong> Ask for <code>weather in New York</code>.</li>
-    </ul>
-  </div>
+  const pdfUpload = document.getElementById("pdf-upload");
+  const imageUpload = document.getElementById("image-upload");
+  const fileSelectModal = document.getElementById("file-select-modal");
+  const selectPdf = document.getElementById("select-pdf");
+  const selectImage = document.getElementById("select-image");
+  const attachmentButton = document.getElementById("attachment-button");
 
-  <!-- File Select Modal -->
-  <div id="file-select-modal" class="modal hidden">
-    <div class="modal-content">
-      <h3>Select File Type</h3>
-      <button id="select-pdf">Upload PDF</button>
-      <button id="select-image">Upload Image</button>
-    </div>
-  </div>
+  // Core Chat
+  async function sendMessage(message) {
+    if (!message.trim()) return;
+    addMessage("You", message);
+    userInput.value = "";
 
-  <!-- Assistant Panel Toggle -->
-  <button id="todo-panel-toggle">Tasks</button>
+    try {
+      const res = await fetch(backendURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
 
-  <!-- Assistant Panel -->
-  <div id="assistant-panel" class="hidden">
-    <div class="panel-header">
-      <h3>Assistant Panel</h3>
-      <button id="close-assistant">&times;</button>
-    </div>
+      const data = await res.json();
+      addMessage("Nova X", data.response);
+    } catch (err) {
+      addMessage("Nova X", "⚠️ Error: Unable to reach server.");
+    }
+  }
 
-    <div class="panel-tabs">
-      <button class="tab-button active" data-tab="tasks">Tasks</button>
-      <button class="tab-button" data-tab="reminders">Reminders</button>
-    </div>
+  function addMessage(sender, text) {
+    const messageEl = document.createElement("div");
+    messageEl.className = sender === "You" ? "user-message" : "ai-message";
+    messageEl.innerHTML = `<strong>${sender}:</strong> ${text}`;
+    chatBox.appendChild(messageEl);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
 
-    <div id="tasks" class="panel-section">
-      <input type="text" id="task-input" placeholder="Enter a new task" />
-      <button id="add-task">Add Task</button>
-      <ul id="task-list" class="task-list"></ul>
-    </div>
+  sendButton.addEventListener("click", () => sendMessage(userInput.value));
+  userInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") sendMessage(userInput.value);
+  });
 
-    <div id="reminders" class="panel-section hidden">
-      <input type="text" id="reminder-input" placeholder="Enter a reminder (e.g., Call John at 3pm)" />
-      <button id="add-reminder">Add Reminder</button>
-      <ul id="reminder-list" class="task-list"></ul>
-    </div>
-  </div>
+  // Voice Input
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = "en-US";
+  recognition.continuous = false;
 
-  <!-- Main Script -->
-  <script src="script.js"></script>
-</body>
-</html>
+  micButton.addEventListener("click", () => {
+    recognition.start();
+    waveform.classList.remove("hidden");
+  });
+
+  recognition.onresult = event => {
+    const transcript = event.results[0][0].transcript;
+    userInput.value = transcript;
+    sendMessage(transcript);
+    waveform.classList.add("hidden");
+  };
+
+  recognition.onerror = () => waveform.classList.add("hidden");
+  recognition.onend = () => waveform.classList.add("hidden");
+
+  // Help Panel Toggle
+  helpButton.addEventListener("click", () => {
+    helpPanel.classList.toggle("hidden");
+  });
+
+  // Tasks
+  function addTask(taskText) {
+    if (!taskText.trim()) return;
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <input type="checkbox" />
+      <span>${taskText}</span>
+      <button class="delete-task">❌</button>
+    `;
+    taskList.appendChild(li);
+
+    li.querySelector(".delete-task").addEventListener("click", () => li.remove());
+  }
+
+  addTaskButton.addEventListener("click", () => addTask(taskInput.value));
+  taskInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") addTask(taskInput.value);
+  });
+
+  // Reminders
+  function addReminder(reminderText) {
+    if (!reminderText.trim()) return;
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <span>${reminderText}</span>
+      <button class="delete-task">❌</button>
+    `;
+    reminderList.appendChild(li);
+
+    li.querySelector(".delete-task").addEventListener("click", () => li.remove());
+
+    const timeMatch = reminderText.match(/at\s(\d{1,2})(?::(\d{2}))?\s?(am|pm)?/i);
+    if (timeMatch) {
+      let hour = parseInt(timeMatch[1]);
+      const minute = parseInt(timeMatch[2]) || 0;
+      const period = timeMatch[3]?.toLowerCase();
+
+      if (period === "pm" && hour < 12) hour += 12;
+      if (period === "am" && hour === 12) hour = 0;
+
+      const now = new Date();
+      const reminderTime = new Date();
+      reminderTime.setHours(hour, minute, 0, 0);
+
+      const delay = reminderTime - now;
+      if (delay > 0) {
+        setTimeout(() => alert(`⏰ Reminder: ${reminderText}`), delay);
+      }
+    }
+  }
+
+  addReminderButton.addEventListener("click", () => addReminder(reminderInput.value));
+  reminderInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") addReminder(reminderInput.value);
+  });
+
+  // Assistant Panel Toggle
+  todoPanelToggle.addEventListener("click", () => {
+    assistantPanel.classList.toggle("hidden");
+  });
+
+  closeAssistant.addEventListener("click", () => {
+    assistantPanel.classList.add("hidden");
+  });
+
+  tabButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      tabButtons.forEach(btn => btn.classList.remove("active"));
+      button.classList.add("active");
+
+      const targetTab = button.getAttribute("data-tab");
+      tabSections.forEach(section => {
+        section.classList.toggle("hidden", section.id !== targetTab);
+      });
+    });
+  });
+
+  // File Upload Modal Handling
+  attachmentButton.addEventListener("click", () => {
+    fileSelectModal.classList.remove("hidden");
+  });
+
+  selectPdf.addEventListener("click", () => {
+    fileSelectModal.classList.add("hidden");
+    pdfUpload.click();
+  });
+
+  selectImage.addEventListener("click", () => {
+    fileSelectModal.classList.add("hidden");
+    imageUpload.click();
+  });
+
+  // PDF Upload
+  pdfUpload.addEventListener("change", async function () {
+    const file = this.files[0];
+    if (!file || file.type !== "application/pdf") {
+      addMessage("Nova X", "⚠️ Please upload a valid PDF file.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("pdf", file);
+
+    try {
+      const res = await fetch("https://nova-x-v2-backend.onrender.com/upload/pdf", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      const summaryPrompt = `Summarize the contents of this PDF:\n\n${data.text}`;
+      const summaryRes = await fetch(backendURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: summaryPrompt }),
+      });
+
+      const summaryData = await summaryRes.json();
+      addMessage("Nova X", summaryData.response);
+    } catch {
+      addMessage("Nova X", "❌ Error processing the PDF.");
+    }
+  });
+
+  // Image Upload with Tesseract
+  imageUpload.addEventListener("change", async function () {
+    const file = this.files[0];
+    if (!file || !file.type.startsWith("image/")) {
+      addMessage("Nova X", "⚠️ Please upload a valid image file.");
+      return;
+    }
+
+    addMessage("Nova X", "🖼️ Processing image...");
+    try {
+      const { data: { text } } = await Tesseract.recognize(file, 'eng');
+      const summaryPrompt = `Summarize this image content:\n\n${text}`;
+      const chatRes = await fetch(backendURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: summaryPrompt }),
+      });
+
+      const chatData = await chatRes.json();
+      addMessage("Nova X", chatData.response);
+    } catch {
+      addMessage("Nova X", "❌ Error processing the image.");
+    }
+  });
+});
