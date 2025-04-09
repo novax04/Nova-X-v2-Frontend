@@ -1,3 +1,6 @@
+
+const backendURL = "https://nova-x-v2-backend.onrender.com/chat";
+
 document.addEventListener("DOMContentLoaded", () => {
   const chatBox = document.getElementById("chat-box");
   const userInput = document.getElementById("user-input");
@@ -6,239 +9,233 @@ document.addEventListener("DOMContentLoaded", () => {
   const waveform = document.getElementById("waveform");
   const helpButton = document.getElementById("help-button");
   const helpPanel = document.getElementById("help-panel");
-  const attachmentButton = document.getElementById("attachment-button");
-  const fileInput = document.getElementById("file-input");
+
+  const taskInput = document.getElementById("task-input");
+  const addTaskButton = document.getElementById("add-task");
+  const taskList = document.getElementById("task-list");
+
+  const reminderInput = document.getElementById("reminder-input");
+  const addReminderButton = document.getElementById("add-reminder");
+  const reminderList = document.getElementById("reminder-list");
+
+  const todoPanelToggle = document.getElementById("todo-panel-toggle");
+  const assistantPanel = document.getElementById("assistant-panel");
+  const closeAssistant = document.getElementById("close-assistant");
+
+  const tabButtons = document.querySelectorAll(".tab-button");
+  const tabSections = document.querySelectorAll(".panel-section");
+
+  const pdfUpload = document.getElementById("pdf-upload");
+  const imageUpload = document.getElementById("image-upload");
   const fileSelectModal = document.getElementById("file-select-modal");
+  const selectPdf = document.getElementById("select-pdf");
+  const selectImage = document.getElementById("select-image");
+  const attachmentButton = document.getElementById("attachment-button");
 
-  const backendBase = "https://nova-x-v2-backend.onrender.com";
-
-  // Send user message
-  const sendMessage = async () => {
-    const message = userInput.value.trim();
-    if (!message) return;
-    addMessage("You", message, "user-message");
+  // Core Chat
+  async function sendMessage(message) {
+    if (!message.trim()) return;
+    addMessage("You", message);
     userInput.value = "";
 
-    addMessage("Nova X", "🧠 Thinking...");
-
     try {
-      const res = await fetch(`${backendBase}/chat`, {
+      const res = await fetch(backendURL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message })
+        body: JSON.stringify({ message }),
       });
 
       const data = await res.json();
-      updateLastMessage(`🧠 ${data.response || "No response."}`);
+      addMessage("Nova X", data.response);
     } catch (err) {
-      console.error(err);
-      updateLastMessage("❌ Error processing your request.");
+      addMessage("Nova X", "⚠️ Error: Unable to reach server.");
     }
-  };
+  }
 
-  sendButton.addEventListener("click", sendMessage);
-  userInput.addEventListener("keydown", e => {
-    if (e.key === "Enter") sendMessage();
-  });
-
-  // Add message to chat
-  function addMessage(sender, text, className = "ai-message") {
-    const msg = document.createElement("div");
-    msg.classList.add("message", className);
-    msg.innerHTML = `<strong>${sender}:</strong> ${text.replace(/\n/g, "<br>")}`;
-    chatBox.appendChild(msg);
+  function addMessage(sender, text) {
+    const messageEl = document.createElement("div");
+    messageEl.className = sender === "You" ? "user-message" : "ai-message";
+    messageEl.innerHTML = `<strong>${sender}:</strong> ${text}`;
+    chatBox.appendChild(messageEl);
     chatBox.scrollTop = chatBox.scrollHeight;
   }
 
-  function updateLastMessage(text) {
-    const messages = chatBox.querySelectorAll(".message");
-    const last = messages[messages.length - 1];
-    if (last) last.innerHTML = `<strong>Nova X:</strong> ${text.replace(/\n/g, "<br>")}`;
-  }
-
-  // Voice input
-  let recognition;
-  micButton.addEventListener("click", () => {
-    if (!('webkitSpeechRecognition' in window)) {
-      alert("Speech recognition not supported.");
-      return;
-    }
-
-    recognition = new webkitSpeechRecognition();
-    recognition.lang = "en-US";
-    recognition.start();
-    waveform.classList.remove("hidden");
-
-    recognition.onresult = event => {
-      const transcript = event.results[0][0].transcript;
-      userInput.value = transcript;
-      waveform.classList.add("hidden");
-      sendMessage();
-    };
-
-    recognition.onerror = () => {
-      waveform.classList.add("hidden");
-    };
+  sendButton.addEventListener("click", () => sendMessage(userInput.value));
+  userInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") sendMessage(userInput.value);
   });
 
-  // Help toggle
+  // Voice Input
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = "en-US";
+  recognition.continuous = false;
+
+  micButton.addEventListener("click", () => {
+    recognition.start();
+    waveform.classList.remove("hidden");
+  });
+
+  recognition.onresult = event => {
+    const transcript = event.results[0][0].transcript;
+    userInput.value = transcript;
+    sendMessage(transcript);
+    waveform.classList.add("hidden");
+  };
+
+  recognition.onerror = () => waveform.classList.add("hidden");
+  recognition.onend = () => waveform.classList.add("hidden");
+
+  // Help Panel Toggle
   helpButton.addEventListener("click", () => {
     helpPanel.classList.toggle("hidden");
   });
 
-  // File upload modal
-  attachmentButton.addEventListener("click", () => {
-    fileSelectModal.classList.remove("hidden");
+  // Tasks
+  function addTask(taskText) {
+    if (!taskText.trim()) return;
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <input type="checkbox" />
+      <span>${taskText}</span>
+      <button class="delete-task">❌</button>
+    `;
+    taskList.appendChild(li);
+
+    li.querySelector(".delete-task").addEventListener("click", () => li.remove());
+  }
+
+  addTaskButton.addEventListener("click", () => addTask(taskInput.value));
+  taskInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") addTask(taskInput.value);
   });
 
-  document.getElementById("select-pdf").addEventListener("click", () => {
-    fileInput.setAttribute("accept", ".pdf");
-    fileSelectModal.classList.add("hidden");
-    fileInput.click();
-  });
+  // Reminders
+  function addReminder(reminderText) {
+    if (!reminderText.trim()) return;
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <span>${reminderText}</span>
+      <button class="delete-task">❌</button>
+    `;
+    reminderList.appendChild(li);
 
-  document.getElementById("select-image").addEventListener("click", () => {
-    fileInput.setAttribute("accept", "image/*");
-    fileSelectModal.classList.add("hidden");
-    fileInput.click();
-  });
+    li.querySelector(".delete-task").addEventListener("click", () => li.remove());
 
-  fileInput.addEventListener("change", async () => {
-    const file = fileInput.files[0];
-    if (!file) return;
+    const timeMatch = reminderText.match(/at\s(\d{1,2})(?::(\d{2}))?\s?(am|pm)?/i);
+    if (timeMatch) {
+      let hour = parseInt(timeMatch[1]);
+      const minute = parseInt(timeMatch[2]) || 0;
+      const period = timeMatch[3]?.toLowerCase();
 
-    const fileType = file.type;
+      if (period === "pm" && hour < 12) hour += 12;
+      if (period === "am" && hour === 12) hour = 0;
 
-    if (fileType === "application/pdf") {
-      addMessage("Nova X", "📄 Uploading PDF for analysis...");
-      const formData = new FormData();
-      formData.append("pdf", file);
+      const now = new Date();
+      const reminderTime = new Date();
+      reminderTime.setHours(hour, minute, 0, 0);
 
-      try {
-        const res = await fetch(`${backendBase}/pdf`, {
-          method: "POST",
-          body: formData
-        });
-        const data = await res.json();
-        addMessage("Nova X", `📑 PDF Summary:\n\n${data.summary || "No summary returned."}`);
-      } catch (err) {
-        console.error(err);
-        addMessage("Nova X", "❌ Error analyzing PDF.");
+      const delay = reminderTime - now;
+      if (delay > 0) {
+        setTimeout(() => alert(`⏰ Reminder: ${reminderText}`), delay);
       }
-
-    } else if (fileType.startsWith("image/")) {
-      addMessage("Nova X", "🖼️ Extracting text from image...");
-
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const imageData = reader.result;
-
-        try {
-          const { data: { text } } = await Tesseract.recognize(imageData, 'eng');
-
-          if (!text.trim()) {
-            addMessage("Nova X", "❌ No text found in the image.");
-            return;
-          }
-
-          addMessage("Nova X", `🔍 Extracted Text:\n\n${text.trim()}`);
-
-          // Summarize the extracted text
-          addMessage("Nova X", "🧠 Summarizing extracted text...");
-          const summaryRes = await fetch(`${backendBase}/chat`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: `Summarize this:\n\n${text.trim()}` })
-          });
-
-          const summaryData = await summaryRes.json();
-          addMessage("Nova X", `📝 Summary:\n\n${summaryData.response || "No summary returned."}`);
-        } catch (err) {
-          console.error(err);
-          addMessage("Nova X", "❌ Error analyzing the image.");
-        }
-      };
-      reader.readAsDataURL(file);
-    } else {
-      addMessage("Nova X", "⚠️ Unsupported file type.");
     }
+  }
 
-    fileInput.value = '';
+  addReminderButton.addEventListener("click", () => addReminder(reminderInput.value));
+  reminderInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") addReminder(reminderInput.value);
   });
 
-  // Assistant panel tabs (Tasks & Reminders)
-  const tabButtons = document.querySelectorAll(".tab-button");
-  const tabSections = document.querySelectorAll(".panel-section");
+  // Assistant Panel Toggle
+  todoPanelToggle.addEventListener("click", () => {
+    assistantPanel.classList.toggle("hidden");
+  });
+
+  closeAssistant.addEventListener("click", () => {
+    assistantPanel.classList.add("hidden");
+  });
 
   tabButtons.forEach(button => {
     button.addEventListener("click", () => {
       tabButtons.forEach(btn => btn.classList.remove("active"));
-      tabSections.forEach(sec => sec.classList.add("hidden"));
-
       button.classList.add("active");
-      document.getElementById(button.dataset.tab).classList.remove("hidden");
+
+      const targetTab = button.getAttribute("data-tab");
+      tabSections.forEach(section => {
+        section.classList.toggle("hidden", section.id !== targetTab);
+      });
     });
   });
 
-  // Tasks
-  document.getElementById("add-task").addEventListener("click", () => {
-    const input = document.getElementById("task-input");
-    const text = input.value.trim();
-    if (!text) return;
-
-    const li = document.createElement("li");
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    const span = document.createElement("span");
-    span.textContent = text;
-    const del = document.createElement("button");
-    del.textContent = "🗑️";
-    del.addEventListener("click", () => li.remove());
-
-    li.appendChild(checkbox);
-    li.appendChild(span);
-    li.appendChild(del);
-    document.getElementById("task-list").appendChild(li);
-    input.value = "";
+  // File Upload Modal Handling
+  attachmentButton.addEventListener("click", () => {
+    fileSelectModal.classList.remove("hidden");
   });
 
-  // Reminders
-  document.getElementById("add-reminder").addEventListener("click", () => {
-    const input = document.getElementById("reminder-input");
-    const text = input.value.trim();
-    if (!text) return;
+  selectPdf.addEventListener("click", () => {
+    fileSelectModal.classList.add("hidden");
+    pdfUpload.click();
+  });
 
-    const match = text.match(/(.+)\s+at\s+(\d{1,2}:\d{2})/i);
-    if (!match) {
-      alert("Use format: Do something at HH:MM");
+  selectImage.addEventListener("click", () => {
+    fileSelectModal.classList.add("hidden");
+    imageUpload.click();
+  });
+
+  // PDF Upload
+  pdfUpload.addEventListener("change", async function () {
+    const file = this.files[0];
+    if (!file || file.type !== "application/pdf") {
+      addMessage("Nova X", "⚠️ Please upload a valid PDF file.");
       return;
     }
 
-    const [_, task, time] = match;
-    const li = document.createElement("li");
-    li.textContent = `${task} at ${time}`;
-    document.getElementById("reminder-list").appendChild(li);
+    const formData = new FormData();
+    formData.append("pdf", file);
 
-    const now = new Date();
-    const [hours, minutes] = time.split(":").map(Number);
-    const remindTime = new Date();
-    remindTime.setHours(hours, minutes, 0, 0);
+    try {
+      const res = await fetch("https://nova-x-v2-backend.onrender.com/upload/pdf", {
+        method: "POST",
+        body: formData,
+      });
 
-    let delay = remindTime - now;
-    if (delay < 0) delay += 86400000;
+      const data = await res.json();
+      const summaryPrompt = `Summarize the contents of this PDF:\n\n${data.text}`;
+      const summaryRes = await fetch(backendURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: summaryPrompt }),
+      });
 
-    setTimeout(() => {
-      alert(`⏰ Reminder: ${task}`);
-    }, delay);
-
-    input.value = "";
+      const summaryData = await summaryRes.json();
+      addMessage("Nova X", summaryData.response);
+    } catch {
+      addMessage("Nova X", "❌ Error processing the PDF.");
+    }
   });
 
-  // Toggle assistant panel
-  document.getElementById("close-assistant").addEventListener("click", () => {
-    document.getElementById("assistant-panel").classList.toggle("hidden");
-  });
+  // Image Upload with Tesseract
+  imageUpload.addEventListener("change", async function () {
+    const file = this.files[0];
+    if (!file || !file.type.startsWith("image/")) {
+      addMessage("Nova X", "⚠️ Please upload a valid image file.");
+      return;
+    }
 
-  // Optional: Open assistant panel automatically
-  // document.getElementById("assistant-panel").classList.remove("hidden");
+    addMessage("Nova X", "🖼️ Processing image...");
+    try {
+      const { data: { text } } = await Tesseract.recognize(file, 'eng');
+      const summaryPrompt = `Summarize this image content:\n\n${text}`;
+      const chatRes = await fetch(backendURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: summaryPrompt }),
+      });
+
+      const chatData = await chatRes.json();
+      addMessage("Nova X", chatData.response);
+    } catch {
+      addMessage("Nova X", "❌ Error processing the image.");
+    }
+  });
 });
