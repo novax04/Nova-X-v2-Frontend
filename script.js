@@ -284,3 +284,29 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
+// 📷 Image Analyzer from Assistant Panel
+document.getElementById("analyze-image-button").addEventListener("click", () => {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    addMessage("Nova X", "🖼️ Analyzing image...");
+
+    try {
+      const { data: { text } } = await Tesseract.recognize(file, "eng");
+      const summaryPrompt = `Summarize this image content:\n\n${text}`;
+      const chatRes = await fetch(backendURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: summaryPrompt })
+      });
+      const data = await chatRes.json();
+      addMessage("Nova X", data.response);
+    } catch (err) {
+      addMessage("Nova X", "❌ Failed to extract or summarize image.");
+    }
+  };
+  input.click();
+});
