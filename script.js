@@ -1,325 +1,208 @@
-const backendURL = "https://nova-x-v2-backend.onrender.com/chat";
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
+import os
+import requests
+import datetime
+import PyPDF2
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+from werkzeug.utils import secure_filename
 
-function showTab(tabName) {
-    document.querySelectorAll(".panel-section").forEach(panel => panel.style.display = "none");
-    document.querySelectorAll(".tab-button").forEach(button => button.classList.remove("active"));
-    document.getElementById(tabName).style.display = "block";
-    document.querySelector(`.tab-button[data-tab="${tabName}"]`).classList.add("active");
+# Load environment variables
+load_dotenv()
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GNEWS_API_KEY = os.getenv("GNEWS_API_KEY")
+CURRENTS_API_KEY = os.getenv("CURRENTS_API_KEY")
+
+app = Flask(__name__)
+CORS(app)
+
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+chat_history = []
+
+country_codes = {
+    "united states": "us", "india": "in", "united kingdom": "gb",
+    "canada": "ca", "germany": "de", "france": "fr",
+    "australia": "au", "japan": "jp", "china": "cn"
 }
 
-function addTask() {
-    const taskInput = document.getElementById("task-input");
-    const taskList = document.getElementById("task-list");
-    if (taskInput.value.trim()) {
-        const li = document.createElement("li");
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        const span = document.createElement("span");
-        span.textContent = taskInput.value.trim();
-        const deleteButton = document.createElement("button");
-        deleteButton.textContent = "🗑️";
-        deleteButton.onclick = () => taskList.removeChild(li);
-        li.append(checkbox, span, deleteButton);
-        taskList.appendChild(li);
-        taskInput.value = "";
-    }
-}
+# ✅ Safer root endpoint
+@app.route('/')
+def home():
+    return jsonify({"message": "Hello from Nova X backend!"})
 
-function addReminder() {
-    const reminderInput = document.getElementById("reminder-input");
-    const reminderList = document.getElementById("reminder-list");
-    if (reminderInput.value.trim()) {
-        const li = document.createElement("li");
-        li.textContent = reminderInput.value.trim();
-        reminderList.appendChild(li);
-        reminderInput.value = "";
-    }
-}
+@app.route('/datetime', methods=['GET'])
+def get_datetime():
+    now = datetime.datetime.now()
+    date = now.strftime('%A, %B %d, %Y')
+    time = now.strftime('%I:%M:%S %p')
+    return jsonify({'response': f"📅 Date: {date} | ⏰ Time: {time}"})
 
-document.addEventListener("DOMContentLoaded", () => {
-    const userInput = document.getElementById("user-input");
-    const chatBox = document.getElementById("chat-box");
-    const sendButton = document.getElementById("send-button");
-    const micButton = document.getElementById("mic-button");
-    const waveform = document.getElementById("waveform");
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.lang = "en-US";
-    let isRecording = false;
+# 📰 Currents fallback
+def fetch_currents_news(query=None, country=None):
+    headers = { 'Authorization': CURRENTS_API_KEY }
+    params = { 'language': 'en' }
+    if query:
+        params['keywords'] = query
+    elif country:
+        params['country'] = country
 
-    micButton.addEventListener("click", () => {
-        if (isRecording) recognition.stop(); else recognition.start();
-        isRecording = !isRecording;
-        micButton.classList.toggle("active", isRecording);
-        waveform.style.display = isRecording ? "flex" : "none";
-    });
+    response = requests.get("https://api.currentsapi.services/v1/latest-news", headers=headers, params=params)
+    data = response.json()
+    articles = data.get('news', [])[:5]
+    return '\n'.join(f"📰 {a['title']} - {a.get('author') or 'Unknown'}" for a in articles)
 
-    recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        userInput.value = transcript;
-        stopRecordingUI();
-        sendMessage();
-    };
 
-    recognition.onspeechend = stopRecordingUI;
-    recognition.onerror = (event) => {
-        addMessage("Nova X", `⚠️ Speech recognition error: ${event.error}`, "ai-message");
-        stopRecordingUI();
-    };
+# 🤖 Groq Chat Handler
+def handle_chat(message):
+    chat_history.append({"role": "user", "content": message})
+    system_prompt = {"role": "system", "content": "You are Nova X, a helpful AI assistant."}
+    trimmed_history = chat_history[-12:]
 
-    function stopRecordingUI() {
-        isRecording = false;
-        micButton.classList.remove("active");
-        waveform.style.display = "none";
+    payload = {
+        "model": "llama3-70b-8192",
+        "messages": [system_prompt] + trimmed_history,
+        "temperature": 1,
+        "max_tokens": 1024,
+        "top_p": 1,
+        "stream": False
     }
 
-    sendButton.addEventListener("click", sendMessage);
-    userInput.addEventListener("keypress", (event) => {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            sendMessage();
-        }
-    });
-
-    async function sendMessage() {
-        const message = userInput.value.trim();
-        if (!message) return;
-
-        addMessage("You", message, "user-message");
-        userInput.value = "";
-
-        const loader = document.createElement("div");
-        loader.classList.add("typing-indicator");
-        loader.innerHTML = "<span></span><span></span><span></span>";
-        chatBox.appendChild(loader);
-        chatBox.scrollTop = chatBox.scrollHeight;
-
-        const lowerCaseMessage = message.toLowerCase();
-
-        if (lowerCaseMessage.startsWith("search ")) {
-            const query = lowerCaseMessage.replace(/^search /i, "");
-            const results = await searchWeb(query);
-            chatBox.removeChild(loader);
-            addMessage("Nova X", "🔎 Search results:", "ai-message");
-            chatBox.innerHTML += results.map(r =>
-                typeof r === 'string'
-                    ? `<div>${r}</div>`
-                    : `<div class="ai-message"><a href="${unwrapDuckDuckGoURL(r.url)}" target="_blank"><strong>${r.title}</strong></a></div>`
-            ).join('');
-            chatBox.scrollTop = chatBox.scrollHeight;
-            return;
-        }
-
-        if (lowerCaseMessage.includes("news in")) {
-            const country = lowerCaseMessage.replace("news in", "").trim();
-            await fetchNewsByCountry(country);
-            chatBox.removeChild(loader);
-            return;
-        }
-
-        if (lowerCaseMessage.includes("news about")) {
-            const topic = lowerCaseMessage.replace("news about", "").trim();
-            await fetchNewsByTopic(topic);
-            chatBox.removeChild(loader);
-            return;
-        }
-
-        if (lowerCaseMessage.includes("weather in")) {
-            const city = lowerCaseMessage.replace("weather in", "").trim();
-            await getWeatherByCity(city);
-            chatBox.removeChild(loader);
-            return;
-        }
-
-        if (lowerCaseMessage.includes("weather") || lowerCaseMessage.includes("temperature")) {
-            getLocation();
-            chatBox.removeChild(loader);
-            return;
-        }
-
-        try {
-            const response = await fetch(backendURL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message })
-            });
-            const data = await response.json();
-            chatBox.removeChild(loader);
-            addMessage("Nova X", data.response, "ai-message");
-        } catch {
-            chatBox.removeChild(loader);
-            addMessage("Nova X", "⚠️ Error getting response from backend.", "ai-message");
-        }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GROQ_API_KEY}"
     }
 
-    function addMessage(sender, text, className = "ai-message") {
-        const msg = document.createElement("div");
-        msg.classList.add("message", className);
-        msg.innerHTML = `<strong>${sender}:</strong> ${text.replace(/\n/g, "<br>")}`;
-        chatBox.appendChild(msg);
-        chatBox.scrollTop = chatBox.scrollHeight;
-    }
+    response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers)
+    data = response.json()
+    reply = data['choices'][0]['message']['content']
+    chat_history.append({"role": "assistant", "content": reply})
+    return reply
 
-    async function searchWeb(query) {
-        const res = await fetch("https://nova-x-v2-backend.onrender.com/search-web", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query })
-        });
-        const data = await res.json();
-        return data.results;
-    }
 
-    function unwrapDuckDuckGoURL(wrappedUrl) {
-        const match = wrappedUrl.match(/uddg=([^&]+)/);
-        return match ? decodeURIComponent(match[1]) : wrappedUrl;
-    }
+# ✅ Chat endpoint
+@app.route('/chat', methods=['POST'])
+@app.route('/api/ask', methods=['POST'])
+def chat():
+    message = request.json.get('message', '').strip()
+    if not message:
+        return jsonify({'error': '⚠️ Message is required'}), 400
+    try:
+        reply = handle_chat(message)
+        return jsonify({'response': reply})
+    except Exception as e:
+        print("Chat error:", e)
+        return jsonify({'response': '❌ Error connecting to Groq Chat API.'}), 500
 
-    function getLocation() {
-        navigator.geolocation.getCurrentPosition(
-            pos => getWeather(pos.coords.latitude, pos.coords.longitude),
-            () => addMessage("Nova X", "⚠️ Location access denied.", "ai-message")
-        );
-    }
 
-    async function getWeather(lat, lon) {
-        const apiKey = "9f3002b2622c489d9cf133330251803";
-        const url = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${lat},${lon}`;
-        try {
-            const res = await fetch(url);
-            const data = await res.json();
-            addMessage("Nova X", `🌤️ ${data.location.name}: ${data.current.condition.text}, ${data.current.temp_c}°C`);
-        } catch {
-            addMessage("Nova X", "⚠️ Error getting weather.");
-        }
-    }
+@app.route('/reset-memory', methods=['POST'])
+def reset_memory():
+    chat_history.clear()
+    return jsonify({"message": "🧠 Memory cleared!"})
 
-    async function getWeatherByCity(city) {
-        const apiKey = "9f3002b2622c489d9cf133330251803";
-        const url = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(city)}`;
-        try {
-            const res = await fetch(url);
-            const data = await res.json();
-            addMessage("Nova X", `🌤️ ${data.location.name}: ${data.current.condition.text}, ${data.current.temp_c}°C`);
-        } catch {
-            addMessage("Nova X", "⚠️ Error getting weather.");
-        }
-    }
 
-    async function fetchNewsByCountry(country) {
-        try {
-            const res = await fetch(`https://nova-x-v2-backend.onrender.com/news/country?country=${country}`);
-            const data = await res.json();
-            addMessage("Nova X", data.response);
-        } catch {
-            addMessage("Nova X", "⚠️ Error getting news.");
-        }
-    }
+@app.route('/news/topic', methods=['GET'])
+def news_by_topic():
+    topic = request.args.get('topic', '')
+    if not topic:
+        return jsonify({'response': '⚠️ Topic required.'}), 400
 
-    async function fetchNewsByTopic(topic) {
-        try {
-            const res = await fetch(`https://nova-x-v2-backend.onrender.com/news/topic?topic=${topic}`);
-            const data = await res.json();
-            addMessage("Nova X", data.response);
-        } catch {
-            addMessage("Nova X", "⚠️ Error getting news.");
-        }
-    }
+    url = f"https://gnews.io/api/v4/search?q={topic}&token={GNEWS_API_KEY}"
+    try:
+        response = requests.get(url)
+        articles = response.json().get('articles', [])[:5]
+        if not articles:
+            raise ValueError("Fallback to Currents")
 
-    document.getElementById("help-button").addEventListener("click", () => {
-        const panel = document.getElementById("help-panel");
-        panel.style.display = panel.style.display === "block" ? "none" : "block";
-    });
+        formatted = '\n'.join(f"🗞️ {a['title']} - {a['source']['name']}" for a in articles)
+        return jsonify({'response': formatted})
+    except:
+        try:
+            formatted = fetch_currents_news(query=topic)
+            return jsonify({'response': formatted or "No news found for this topic."})
+        except:
+            return jsonify({'response': '❌ Error fetching topic news.'}), 500
 
-    document.getElementById("todo-panel-toggle").addEventListener("click", () => {
-        document.getElementById("assistant-panel").style.display = "block";
-    });
 
-    document.getElementById("close-assistant").addEventListener("click", () => {
-        document.getElementById("assistant-panel").style.display = "none";
-    });
+@app.route('/news/country', methods=['GET'])
+def news_by_country():
+    country = request.args.get('country', '').lower()
+    code = country_codes.get(country)
+    if not code:
+        return jsonify({'response': '⚠️ Unsupported country.'}), 400
 
-    document.querySelectorAll(".tab-button").forEach(button => {
-        button.addEventListener("click", () => {
-            showTab(button.dataset.tab);
-        });
-    });
+    url = f"https://gnews.io/api/v4/top-headlines?country={code}&token={GNEWS_API_KEY}"
+    try:
+        response = requests.get(url)
+        articles = response.json().get('articles', [])[:5]
+        if not articles:
+            raise ValueError("Fallback to Currents")
 
-    document.getElementById("add-task").addEventListener("click", addTask);
-    document.getElementById("add-reminder").addEventListener("click", addReminder);
+        formatted = '\n'.join(f"📰 {a['title']} - {a['source']['name']}" for a in articles)
+        return jsonify({'response': formatted})
+    except:
+        try:
+            formatted = fetch_currents_news(country=code)
+            return jsonify({'response': formatted or "No news found."})
+        except:
+            return jsonify({'response': '❌ Error fetching country news.'}), 500
 
-    // Attachment dropdown listener (PDF or Image)
-    document.getElementById("attachment-options").addEventListener("change", function () {
-        const type = this.value;
-        const input = document.createElement("input");
-        input.type = "file";
-        input.accept = type === "pdf" ? "application/pdf" : "image/*";
-        input.onchange = () => {
-            const file = input.files[0];
-            if (!file) return;
 
-            if (type === "pdf") processPDF(file);
-            if (type === "image") processImage(file);
-        };
-        input.click();
-        this.value = "";
-    });
+@app.route('/pdf', methods=['POST'])
+def upload_pdf():
+    file = request.files.get('pdf')
+    if not file:
+        return jsonify({'text': None}), 400
 
-    async function processPDF(file) {
-        addMessage("Nova X", "📄 Processing PDF...");
-        const formData = new FormData();
-        formData.append("pdf", file);
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(filepath)
 
-        try {
-            const response = await fetch("https://nova-x-v2-backend.onrender.com/upload/pdf", {
-                method: "POST",
-                body: formData
-            });
-            const result = await response.json();
-            if (result.text) {
-                const summaryPrompt = `Summarize this PDF:\n\n${result.text.slice(0, 3000)}`;
-                const chatRes = await fetch(backendURL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: summaryPrompt })
-                });
-                const chatData = await chatRes.json();
-                addMessage("Nova X", chatData.response);
-            } else {
-                addMessage("Nova X", "❌ No text found in PDF.");
-            }
-        } catch {
-            addMessage("Nova X", "❌ Error processing the PDF.");
-        }
-    }
+    try:
+        with open(filepath, 'rb') as f:
+            reader = PyPDF2.PdfReader(f)
+            text = ''.join(page.extract_text() or '' for page in reader.pages)
+        return jsonify({'text': text})
+    except Exception:
+        return jsonify({'text': None}), 500
 
-    async function processImage(file) {
-        addMessage("Nova X", "🖼️ Analyzing image...");
-        const formData = new FormData();
-        formData.append("image", file);
 
-        try {
-            const response = await fetch("https://nova-x-v2-backend.onrender.com/upload/image", {
-                method: "POST",
-                body: formData
-            });
-            const result = await response.json();
-            if (result.text) {
-                const summaryPrompt = `Summarize or describe this image content:\n\n${result.text}`;
-                const chatRes = await fetch(backendURL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: summaryPrompt })
-                });
-                const chatData = await chatRes.json();
-                addMessage("Nova X", chatData.response);
-            } else {
-                addMessage("Nova X", "❌ No text detected in image.");
-            }
-        } catch {
-            addMessage("Nova X", "❌ Error processing image.");
-        }
-    }
-});
+@app.route('/search-web', methods=['POST'])
+def search_web():
+    query = request.json.get('query', '').strip()
+    if not query:
+        return jsonify({'results': ["No query provided."]}), 400
+
+    try:
+        response = requests.get(f"https://html.duckduckgo.com/html/?q={query}", headers={
+            "User-Agent": "Mozilla/5.0"
+        })
+        soup = BeautifulSoup(response.text, 'html.parser')
+        results = []
+
+        for result in soup.select('.result__title'):
+            a_tag = result.find('a')
+            if a_tag:
+                title = a_tag.get_text(strip=True)
+                url = a_tag.get('href')
+                results.append({'title': title, 'url': url})
+
+        if not results:
+            return jsonify({'results': [f'No results found for "{query}".']})
+        return jsonify({'results': results})
+    except Exception as e:
+        return jsonify({'error': f'Web search failed: {str(e)}'}), 500
+
+
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory('public', path)
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
