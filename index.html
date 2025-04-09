@@ -1,4 +1,13 @@
-// 📎 Toggle file select modal
+// Utility to add message to chat
+function addMessage(sender, text) {
+  const chatBox = document.getElementById("chat-box");
+  const message = document.createElement("div");
+  message.className = "message";
+  message.innerHTML = `<strong>${sender}:</strong> ${text}`;
+  chatBox.appendChild(message);
+}
+
+// Toggle file select modal
 const attachmentBtn = document.getElementById("attachment-button");
 const fileModal = document.getElementById("file-select-modal");
 const selectPDF = document.getElementById("select-pdf");
@@ -15,7 +24,7 @@ document.addEventListener("click", (e) => {
   }
 });
 
-// 📄 PDF Upload
+// PDF Upload
 selectPDF.addEventListener("click", () => {
   fileModal.classList.add("hidden");
   const input = document.createElement("input");
@@ -41,14 +50,14 @@ selectPDF.addEventListener("click", () => {
       });
       const data = await chatRes.json();
       addMessage("Nova X", data.response);
-    } catch {
+    } catch (e) {
       addMessage("Nova X", "❌ Failed to process PDF.");
     }
   };
   input.click();
 });
 
-// 🖼️ Image Upload
+// Image Upload + OCR
 selectImage.addEventListener("click", () => {
   fileModal.classList.add("hidden");
   const input = document.createElement("input");
@@ -59,7 +68,10 @@ selectImage.addEventListener("click", () => {
     if (!file) return;
     addMessage("Nova X", "🖼️ Extracting text from image...");
     try {
-      const { data: { text } } = await Tesseract.recognize(file, 'eng');
+      const { createWorker } = window.Tesseract;
+      const worker = await createWorker("eng");
+      const { data: { text } } = await worker.recognize(file);
+      await worker.terminate();
       const summaryPrompt = `Analyze this image:\n\n${text}`;
       const chatRes = await fetch("https://nova-x-v2-backend.onrender.com/chat", {
         method: "POST",
@@ -68,7 +80,7 @@ selectImage.addEventListener("click", () => {
       });
       const data = await chatRes.json();
       addMessage("Nova X", data.response);
-    } catch {
+    } catch (e) {
       addMessage("Nova X", "❌ OCR failed.");
     }
   };
