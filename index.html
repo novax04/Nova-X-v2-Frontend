@@ -11,24 +11,29 @@
 <body>
   <div class="chat-container">
     <h2 class="glow-title">NOVA X - Personal Assistant</h2>
+
     <div id="chat-box" class="chat-box">
-      <div class="ai-message"><strong>NOVA X:</strong> Hello! I'm Nova X, your AI assistant. How can I help you today?</div>
+      <div class="ai-message">
+        <strong>NOVA X:</strong> Hello! I'm Nova X, your AI assistant. How can I help you today?
+      </div>
     </div>
 
     <div class="input-container">
       <input type="text" id="user-input" placeholder="Type a message..." />
 
+      <!-- 📎 Attachment -->
       <div class="attachment-wrapper">
-        <div id="attachment-button" class="attachment-button" title="Upload">
+        <button id="attachment-button" class="attachment-button" title="Upload">
           <i class="fas fa-paperclip"></i>
-          <div id="file-select-modal" class="file-select-modal hidden">
-            <p>Select File Type</p>
-            <button id="select-pdf">Upload PDF</button>
-            <button id="select-image">Upload Image</button>
-          </div>
+        </button>
+        <div id="file-select-modal" class="file-select-modal hidden">
+          <p>Select File Type</p>
+          <button id="select-pdf">Upload PDF</button>
+          <button id="select-image">Upload Image</button>
         </div>
       </div>
 
+      <!-- 🎙️ Mic -->
       <div class="mic-wrapper">
         <button id="mic-button"><i class="fas fa-microphone"></i></button>
         <div class="waveform hidden" id="waveform">
@@ -40,42 +45,39 @@
     </div>
   </div>
 
+  <!-- ❔ Help Panel -->
   <button id="help-button" title="Help">❔</button>
   <div id="help-panel" class="hidden">
     <h2>How to Use Nova X</h2>
     <ul>
-      <li><strong>Chat:</strong> Type your question and click Send or hit Enter.</li>
-      <li><strong>Voice Input:</strong> Click the 🎙️ mic button and speak.</li>
-      <li><strong>Upload:</strong> Click 📎 to upload PDF/image for analysis.</li>
-      <li><strong>Search:</strong> Type <code>search your query</code>.</li>
-      <li><strong>News:</strong> Try <code>news in Canada</code> or <code>news about AI</code>.</li>
-      <li><strong>Tasks:</strong> Use <code>add task Clean room</code> or manage via Tasks tab.</li>
-      <li><strong>Reminder:</strong> Use <code>remind me to call at 2pm</code>.</li>
-      <li><strong>Weather:</strong> Ask <code>weather in New York</code> or just <code>weather</code>.</li>
+      <li><strong>Chat:</strong> Type and press Send.</li>
+      <li><strong>Voice:</strong> Click 🎙️ and speak.</li>
+      <li><strong>Upload:</strong> Click 📎 for PDF/image.</li>
+      <li><strong>Search:</strong> Try <code>search AI tools</code>.</li>
+      <li><strong>News:</strong> Try <code>news about tech</code>.</li>
+      <li><strong>Tasks:</strong> Try <code>add task Study</code>.</li>
+      <li><strong>Weather:</strong> Try <code>weather in London</code>.</li>
     </ul>
   </div>
 
+  <!-- 📝 Assistant Panel -->
   <button id="todo-panel-toggle">Tasks</button>
-
   <div id="assistant-panel" class="hidden">
     <div class="panel-header">
       <h3>Assistant Panel</h3>
       <button id="close-assistant">&times;</button>
     </div>
-
     <div class="panel-tabs">
       <button class="tab-button active" data-tab="tasks">Tasks</button>
       <button class="tab-button" data-tab="reminders">Reminders</button>
     </div>
-
     <div id="tasks" class="panel-section">
       <input type="text" id="task-input" placeholder="Enter a new task" />
       <button id="add-task">Add Task</button>
       <ul id="task-list" class="task-list"></ul>
     </div>
-
     <div id="reminders" class="panel-section hidden">
-      <input type="text" id="reminder-input" placeholder="Enter a reminder (e.g., Call John at 3pm)" />
+      <input type="text" id="reminder-input" placeholder="Enter a reminder" />
       <button id="add-reminder">Add Reminder</button>
       <ul id="reminder-list" class="task-list"></ul>
     </div>
