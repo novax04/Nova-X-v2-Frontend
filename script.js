@@ -1,208 +1,191 @@
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
-import os
-import requests
-import datetime
-import PyPDF2
-from bs4 import BeautifulSoup
-from dotenv import load_dotenv
-from werkzeug.utils import secure_filename
+const backendURL = "https://nova-x-v2-backend.onrender.com/chat";
 
-# Load environment variables
-load_dotenv()
-
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GNEWS_API_KEY = os.getenv("GNEWS_API_KEY")
-CURRENTS_API_KEY = os.getenv("CURRENTS_API_KEY")
-
-app = Flask(__name__)
-CORS(app)
-
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-chat_history = []
-
-country_codes = {
-    "united states": "us", "india": "in", "united kingdom": "gb",
-    "canada": "ca", "germany": "de", "france": "fr",
-    "australia": "au", "japan": "jp", "china": "cn"
+function showTab(tabName) {
+  document.querySelectorAll(".panel-section").forEach(panel => panel.style.display = "none");
+  document.querySelectorAll(".tab-button").forEach(button => button.classList.remove("active"));
+  document.getElementById(tabName).style.display = "block";
+  document.querySelector(`.tab-button[data-tab="${tabName}"]`).classList.add("active");
 }
 
-# ✅ Safer root endpoint
-@app.route('/')
-def home():
-    return jsonify({"message": "Hello from Nova X backend!"})
+document.addEventListener("DOMContentLoaded", () => {
+  const chatBox = document.getElementById("chat-box");
+  const userInput = document.getElementById("user-input");
+  const sendButton = document.getElementById("send-button");
+  const micButton = document.getElementById("mic-button");
+  const waveform = document.getElementById("waveform");
 
-@app.route('/datetime', methods=['GET'])
-def get_datetime():
-    now = datetime.datetime.now()
-    date = now.strftime('%A, %B %d, %Y')
-    time = now.strftime('%I:%M:%S %p')
-    return jsonify({'response': f"📅 Date: {date} | ⏰ Time: {time}"})
+  const attachmentButton = document.getElementById("attachment-button");
+  const fileSelectModal = document.getElementById("file-select-modal");
+  const selectPDF = document.getElementById("select-pdf");
+  const selectImage = document.getElementById("select-image");
 
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = "en-US";
 
-# 📰 Currents fallback
-def fetch_currents_news(query=None, country=None):
-    headers = { 'Authorization': CURRENTS_API_KEY }
-    params = { 'language': 'en' }
-    if query:
-        params['keywords'] = query
-    elif country:
-        params['country'] = country
+  micButton.addEventListener("click", () => {
+    recognition.start();
+    waveform.classList.remove("hidden");
+  });
 
-    response = requests.get("https://api.currentsapi.services/v1/latest-news", headers=headers, params=params)
-    data = response.json()
-    articles = data.get('news', [])[:5]
-    return '\n'.join(f"📰 {a['title']} - {a.get('author') or 'Unknown'}" for a in articles)
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    userInput.value = transcript;
+    sendMessage();
+    waveform.classList.add("hidden");
+  };
 
+  recognition.onerror = () => waveform.classList.add("hidden");
+  recognition.onspeechend = () => waveform.classList.add("hidden");
 
-# 🤖 Groq Chat Handler
-def handle_chat(message):
-    chat_history.append({"role": "user", "content": message})
-    system_prompt = {"role": "system", "content": "You are Nova X, a helpful AI assistant."}
-    trimmed_history = chat_history[-12:]
+  sendButton.addEventListener("click", () => sendMessage());
+  userInput.addEventListener("keypress", e => {
+    if (e.key === "Enter") sendMessage();
+  });
 
-    payload = {
-        "model": "llama3-70b-8192",
-        "messages": [system_prompt] + trimmed_history,
-        "temperature": 1,
-        "max_tokens": 1024,
-        "top_p": 1,
-        "stream": False
+  async function sendMessage() {
+    const message = userInput.value.trim();
+    if (!message) return;
+
+    addMessage("You", message);
+    userInput.value = "";
+
+    const loader = document.createElement("div");
+    loader.classList.add("typing-indicator");
+    loader.innerHTML = "<span></span><span></span><span></span>";
+    chatBox.appendChild(loader);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+      const res = await fetch(backendURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+      const data = await res.json();
+      chatBox.removeChild(loader);
+      addMessage("Nova X", data.response);
+    } catch {
+      chatBox.removeChild(loader);
+      addMessage("Nova X", "⚠️ Error connecting to backend.");
     }
+  }
 
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {GROQ_API_KEY}"
+  function addMessage(sender, text) {
+    const div = document.createElement("div");
+    div.className = sender === "You" ? "user-message" : "ai-message";
+    div.innerHTML = `<strong>${sender}:</strong> ${text}`;
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  // File Upload Dropdown
+  attachmentButton.addEventListener("click", (e) => {
+    fileSelectModal.classList.toggle("hidden");
+    e.stopPropagation();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!attachmentButton.contains(e.target)) {
+      fileSelectModal.classList.add("hidden");
     }
+  });
 
-    response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers)
-    data = response.json()
-    reply = data['choices'][0]['message']['content']
-    chat_history.append({"role": "assistant", "content": reply})
-    return reply
+  selectPDF.addEventListener("click", () => {
+    fileSelectModal.classList.add("hidden");
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".pdf";
+    input.onchange = async () => {
+      const file = input.files[0];
+      if (!file) return;
+      addMessage("Nova X", "📄 Processing PDF...");
+      const formData = new FormData();
+      formData.append("pdf", file);
 
+      try {
+        const res = await fetch("https://nova-x-v2-backend.onrender.com/upload/pdf", {
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
+        const prompt = `Summarize this PDF:\n\n${data.text}`;
+        const chatRes = await fetch(backendURL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: prompt })
+        });
+        const chatData = await chatRes.json();
+        addMessage("Nova X", chatData.response);
+      } catch {
+        addMessage("Nova X", "❌ Failed to process PDF.");
+      }
+    };
+    input.click();
+  });
 
-# ✅ Chat endpoint
-@app.route('/chat', methods=['POST'])
-@app.route('/api/ask', methods=['POST'])
-def chat():
-    message = request.json.get('message', '').strip()
-    if not message:
-        return jsonify({'error': '⚠️ Message is required'}), 400
-    try:
-        reply = handle_chat(message)
-        return jsonify({'response': reply})
-    except Exception as e:
-        print("Chat error:", e)
-        return jsonify({'response': '❌ Error connecting to Groq Chat API.'}), 500
+  selectImage.addEventListener("click", () => {
+    fileSelectModal.classList.add("hidden");
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async () => {
+      const file = input.files[0];
+      if (!file) return;
+      addMessage("Nova X", "🧠 Extracting text from image...");
+      try {
+        const { data: { text } } = await Tesseract.recognize(file, "eng");
+        const prompt = `Summarize this image:\n\n${text}`;
+        const chatRes = await fetch(backendURL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: prompt })
+        });
+        const chatData = await chatRes.json();
+        addMessage("Nova X", chatData.response);
+      } catch {
+        addMessage("Nova X", "❌ OCR failed.");
+      }
+    };
+    input.click();
+  });
 
+  // Help and Task Panel
+  document.getElementById("help-button").addEventListener("click", () => {
+    const panel = document.getElementById("help-panel");
+    panel.classList.toggle("hidden");
+  });
 
-@app.route('/reset-memory', methods=['POST'])
-def reset_memory():
-    chat_history.clear()
-    return jsonify({"message": "🧠 Memory cleared!"})
+  document.getElementById("todo-panel-toggle").addEventListener("click", () => {
+    document.getElementById("assistant-panel").classList.toggle("hidden");
+  });
 
+  document.getElementById("close-assistant").addEventListener("click", () => {
+    document.getElementById("assistant-panel").classList.add("hidden");
+  });
 
-@app.route('/news/topic', methods=['GET'])
-def news_by_topic():
-    topic = request.args.get('topic', '')
-    if not topic:
-        return jsonify({'response': '⚠️ Topic required.'}), 400
+  document.querySelectorAll(".tab-button").forEach(button => {
+    button.addEventListener("click", () => {
+      showTab(button.dataset.tab);
+    });
+  });
 
-    url = f"https://gnews.io/api/v4/search?q={topic}&token={GNEWS_API_KEY}"
-    try:
-        response = requests.get(url)
-        articles = response.json().get('articles', [])[:5]
-        if not articles:
-            raise ValueError("Fallback to Currents")
+  // Tasks & Reminders
+  document.getElementById("add-task").addEventListener("click", () => {
+    const input = document.getElementById("task-input");
+    if (!input.value.trim()) return;
+    const li = document.createElement("li");
+    li.innerHTML = `<input type="checkbox"><span>${input.value}</span><button>🗑️</button>`;
+    li.querySelector("button").onclick = () => li.remove();
+    document.getElementById("task-list").appendChild(li);
+    input.value = "";
+  });
 
-        formatted = '\n'.join(f"🗞️ {a['title']} - {a['source']['name']}" for a in articles)
-        return jsonify({'response': formatted})
-    except:
-        try:
-            formatted = fetch_currents_news(query=topic)
-            return jsonify({'response': formatted or "No news found for this topic."})
-        except:
-            return jsonify({'response': '❌ Error fetching topic news.'}), 500
-
-
-@app.route('/news/country', methods=['GET'])
-def news_by_country():
-    country = request.args.get('country', '').lower()
-    code = country_codes.get(country)
-    if not code:
-        return jsonify({'response': '⚠️ Unsupported country.'}), 400
-
-    url = f"https://gnews.io/api/v4/top-headlines?country={code}&token={GNEWS_API_KEY}"
-    try:
-        response = requests.get(url)
-        articles = response.json().get('articles', [])[:5]
-        if not articles:
-            raise ValueError("Fallback to Currents")
-
-        formatted = '\n'.join(f"📰 {a['title']} - {a['source']['name']}" for a in articles)
-        return jsonify({'response': formatted})
-    except:
-        try:
-            formatted = fetch_currents_news(country=code)
-            return jsonify({'response': formatted or "No news found."})
-        except:
-            return jsonify({'response': '❌ Error fetching country news.'}), 500
-
-
-@app.route('/pdf', methods=['POST'])
-def upload_pdf():
-    file = request.files.get('pdf')
-    if not file:
-        return jsonify({'text': None}), 400
-
-    filename = secure_filename(file.filename)
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
-    file.save(filepath)
-
-    try:
-        with open(filepath, 'rb') as f:
-            reader = PyPDF2.PdfReader(f)
-            text = ''.join(page.extract_text() or '' for page in reader.pages)
-        return jsonify({'text': text})
-    except Exception:
-        return jsonify({'text': None}), 500
-
-
-@app.route('/search-web', methods=['POST'])
-def search_web():
-    query = request.json.get('query', '').strip()
-    if not query:
-        return jsonify({'results': ["No query provided."]}), 400
-
-    try:
-        response = requests.get(f"https://html.duckduckgo.com/html/?q={query}", headers={
-            "User-Agent": "Mozilla/5.0"
-        })
-        soup = BeautifulSoup(response.text, 'html.parser')
-        results = []
-
-        for result in soup.select('.result__title'):
-            a_tag = result.find('a')
-            if a_tag:
-                title = a_tag.get_text(strip=True)
-                url = a_tag.get('href')
-                results.append({'title': title, 'url': url})
-
-        if not results:
-            return jsonify({'results': [f'No results found for "{query}".']})
-        return jsonify({'results': results})
-    except Exception as e:
-        return jsonify({'error': f'Web search failed: {str(e)}'}), 500
-
-
-@app.route('/<path:path>')
-def serve_static(path):
-    return send_from_directory('public', path)
-
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+  document.getElementById("add-reminder").addEventListener("click", () => {
+    const input = document.getElementById("reminder-input");
+    if (!input.value.trim()) return;
+    const li = document.createElement("li");
+    li.textContent = input.value;
+    document.getElementById("reminder-list").appendChild(li);
+    input.value = "";
+  });
+});
