@@ -11,17 +11,13 @@
 <body>
   <div class="chat-container">
     <h2 class="glow-title">NOVA X - Personal Assistant</h2>
-
     <div id="chat-box" class="chat-box">
-      <div class="ai-message">
-        <strong>NOVA X:</strong> Hello! I'm Nova X, your AI assistant. How can I help you today?
-      </div>
+      <div class="ai-message"><strong>NOVA X:</strong> Hello! I'm Nova X, your AI assistant. How can I help you today?</div>
     </div>
 
     <div class="input-container">
       <input type="text" id="user-input" placeholder="Type a message..." />
 
-      <!-- 📎 Attachment Button with Dropdown Modal -->
       <div class="attachment-wrapper">
         <div id="attachment-button" class="attachment-button" title="Upload">
           <i class="fas fa-paperclip"></i>
@@ -33,17 +29,10 @@
         </div>
       </div>
 
-      <!-- 🎙️ Voice Input -->
       <div class="mic-wrapper">
-        <button id="mic-button" title="Start voice input">
-          <i class="fas fa-microphone"></i>
-        </button>
+        <button id="mic-button"><i class="fas fa-microphone"></i></button>
         <div class="waveform hidden" id="waveform">
-          <div class="bar"></div>
-          <div class="bar"></div>
-          <div class="bar"></div>
-          <div class="bar"></div>
-          <div class="bar"></div>
+          <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
         </div>
       </div>
 
@@ -51,7 +40,6 @@
     </div>
   </div>
 
-  <!-- ❔ Help Panel -->
   <button id="help-button" title="Help">❔</button>
   <div id="help-panel" class="hidden">
     <h2>How to Use Nova X</h2>
@@ -63,17 +51,16 @@
       <li><strong>News:</strong> Try <code>news in Canada</code> or <code>news about AI</code>.</li>
       <li><strong>Tasks:</strong> Use <code>add task Clean room</code> or manage via Tasks tab.</li>
       <li><strong>Reminder:</strong> Use <code>remind me to call at 2pm</code>.</li>
-      <li><strong>Weather:</strong> Ask for <code>weather in New York</code>.</li>
+      <li><strong>Weather:</strong> Ask <code>weather in New York</code> or just <code>weather</code>.</li>
     </ul>
   </div>
 
-  <!-- ✅ Assistant Panel -->
-  <button id="todo-panel-toggle" title="Open Tasks & Reminders">Tasks</button>
+  <button id="todo-panel-toggle">Tasks</button>
 
   <div id="assistant-panel" class="hidden">
     <div class="panel-header">
       <h3>Assistant Panel</h3>
-      <button id="close-assistant" title="Close">&times;</button>
+      <button id="close-assistant">&times;</button>
     </div>
 
     <div class="panel-tabs">
