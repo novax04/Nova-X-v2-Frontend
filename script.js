@@ -1,4 +1,4 @@
-const backendURL = "https://nova-x-v2-backend.onrender.com";
+const backendURL = "https://nova-x-v2-backend.onrender.com/chat";
 
 function showTab(tabName) {
     document.querySelectorAll(".panel-section").forEach(panel => panel.style.display = "none");
@@ -45,13 +45,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
+    recognition.continuous = false;
     recognition.lang = "en-US";
-
     let isRecording = false;
 
     micButton.addEventListener("click", () => {
-        if (isRecording) recognition.stop();
-        else recognition.start();
+        if (isRecording) recognition.stop(); else recognition.start();
         isRecording = !isRecording;
         micButton.classList.toggle("active", isRecording);
         waveform.style.display = isRecording ? "flex" : "none";
@@ -65,8 +64,8 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     recognition.onspeechend = stopRecordingUI;
-    recognition.onerror = (e) => {
-        addMessage("Nova X", `⚠️ Speech recognition error: ${e.error}`);
+    recognition.onerror = (event) => {
+        addMessage("Nova X", `⚠️ Speech recognition error: ${event.error}`, "ai-message");
         stopRecordingUI();
     };
 
@@ -77,21 +76,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     sendButton.addEventListener("click", sendMessage);
-    userInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
+    userInput.addEventListener("keypress", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
             sendMessage();
         }
     });
 
-    async function sendMessage(msgOverride = null) {
-        const message = msgOverride || userInput.value.trim();
+    async function sendMessage() {
+        const message = userInput.value.trim();
         if (!message) return;
+
         addMessage("You", message, "user-message");
         userInput.value = "";
 
         const loader = document.createElement("div");
-        loader.className = "typing-indicator";
+        loader.classList.add("typing-indicator");
         loader.innerHTML = "<span></span><span></span><span></span>";
         chatBox.appendChild(loader);
         chatBox.scrollTop = chatBox.scrollHeight;
@@ -102,7 +102,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const query = lowerCaseMessage.replace(/^search /i, "");
             const results = await searchWeb(query);
             chatBox.removeChild(loader);
-            addMessage("Nova X", "🔎 Search results:");
+            addMessage("Nova X", "🔎 Search results:", "ai-message");
             chatBox.innerHTML += results.map(r =>
                 typeof r === 'string'
                     ? `<div>${r}</div>`
@@ -140,17 +140,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            const res = await fetch(backendURL, {
+            const response = await fetch(backendURL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ message })
             });
-            const data = await res.json();
+            const data = await response.json();
             chatBox.removeChild(loader);
-            addMessage("Nova X", data.response);
+            addMessage("Nova X", data.response, "ai-message");
         } catch {
             chatBox.removeChild(loader);
-            addMessage("Nova X", "⚠️ Error getting response.");
+            addMessage("Nova X", "⚠️ Error getting response from backend.", "ai-message");
         }
     }
 
@@ -163,7 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function searchWeb(query) {
-        const res = await fetch(`${backendURL}/search-web`, {
+        const res = await fetch("https://nova-x-v2-backend.onrender.com/search-web", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ query })
@@ -172,15 +172,15 @@ document.addEventListener("DOMContentLoaded", () => {
         return data.results;
     }
 
-    function unwrapDuckDuckGoURL(url) {
-        const match = url.match(/uddg=([^&]+)/);
-        return match ? decodeURIComponent(match[1]) : url;
+    function unwrapDuckDuckGoURL(wrappedUrl) {
+        const match = wrappedUrl.match(/uddg=([^&]+)/);
+        return match ? decodeURIComponent(match[1]) : wrappedUrl;
     }
 
     function getLocation() {
         navigator.geolocation.getCurrentPosition(
             pos => getWeather(pos.coords.latitude, pos.coords.longitude),
-            () => addMessage("Nova X", "⚠️ Location access denied.")
+            () => addMessage("Nova X", "⚠️ Location access denied.", "ai-message")
         );
     }
 
@@ -190,7 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const res = await fetch(url);
             const data = await res.json();
-            addMessage("Nova X", `🌦️ ${data.location.name}: ${data.current.condition.text}, ${data.current.temp_c}°C`);
+            addMessage("Nova X", `🌤️ ${data.location.name}: ${data.current.condition.text}, ${data.current.temp_c}°C`);
         } catch {
             addMessage("Nova X", "⚠️ Error getting weather.");
         }
@@ -202,7 +202,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const res = await fetch(url);
             const data = await res.json();
-            addMessage("Nova X", `🌦️ ${data.location.name}: ${data.current.condition.text}, ${data.current.temp_c}°C`);
+            addMessage("Nova X", `🌤️ ${data.location.name}: ${data.current.condition.text}, ${data.current.temp_c}°C`);
         } catch {
             addMessage("Nova X", "⚠️ Error getting weather.");
         }
@@ -210,7 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchNewsByCountry(country) {
         try {
-            const res = await fetch(`${backendURL}/news/country?country=${country}`);
+            const res = await fetch(`https://nova-x-v2-backend.onrender.com/news/country?country=${country}`);
             const data = await res.json();
             addMessage("Nova X", data.response);
         } catch {
@@ -220,7 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchNewsByTopic(topic) {
         try {
-            const res = await fetch(`${backendURL}/news/topic?topic=${topic}`);
+            const res = await fetch(`https://nova-x-v2-backend.onrender.com/news/topic?topic=${topic}`);
             const data = await res.json();
             addMessage("Nova X", data.response);
         } catch {
@@ -228,61 +228,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 📄 PDF Upload
-    document.getElementById("pdf-upload").addEventListener("change", async function () {
-        const file = this.files[0];
-        if (!file || file.type !== "application/pdf") {
-            addMessage("Nova X", "⚠️ Please upload a valid PDF.");
-            return;
-        }
-
-        addMessage("Nova X", "📄 Processing PDF...");
-        const formData = new FormData();
-        formData.append("pdf", file);
-
-        try {
-            const response = await fetch(`${backendURL}/pdf`, {
-                method: "POST",
-                body: formData,
-            });
-            const result = await response.json();
-            if (result.text) {
-                const summaryPrompt = `Summarize this PDF:\n\n${result.text.slice(0, 3000)}`;
-                const chatRes = await fetch(backendURL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: summaryPrompt }),
-                });
-                const chatData = await chatRes.json();
-                addMessage("Nova X", chatData.response);
-            } else {
-                addMessage("Nova X", "❌ No text found in PDF.");
-            }
-        } catch {
-            addMessage("Nova X", "❌ Error processing PDF.");
-        }
-    });
-
-    // 🖼️ Image Upload with OCR
-    document.getElementById("image-upload").addEventListener("change", async function () {
-        const file = this.files[0];
-        if (!file || !file.type.startsWith("image/")) {
-            addMessage("Nova X", "⚠️ Please upload a valid image.");
-            return;
-        }
-
-        addMessage("Nova X", "🧠 Extracting text from image...");
-
-        try {
-            const text = await Tesseract.recognize(file, "eng").then(({ data: { text } }) => text.trim());
-            addMessage("You (from image)", text);
-            sendMessage(text);
-        } catch {
-            addMessage("Nova X", "❌ OCR failed to process the image.");
-        }
-    });
-
-    // Toggle Help / Assistant Panel
     document.getElementById("help-button").addEventListener("click", () => {
         const panel = document.getElementById("help-panel");
         panel.style.display = panel.style.display === "block" ? "none" : "block";
@@ -297,9 +242,84 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     document.querySelectorAll(".tab-button").forEach(button => {
-        button.addEventListener("click", () => showTab(button.dataset.tab));
+        button.addEventListener("click", () => {
+            showTab(button.dataset.tab);
+        });
     });
 
     document.getElementById("add-task").addEventListener("click", addTask);
     document.getElementById("add-reminder").addEventListener("click", addReminder);
+
+    // Attachment dropdown listener (PDF or Image)
+    document.getElementById("attachment-options").addEventListener("change", function () {
+        const type = this.value;
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = type === "pdf" ? "application/pdf" : "image/*";
+        input.onchange = () => {
+            const file = input.files[0];
+            if (!file) return;
+
+            if (type === "pdf") processPDF(file);
+            if (type === "image") processImage(file);
+        };
+        input.click();
+        this.value = "";
+    });
+
+    async function processPDF(file) {
+        addMessage("Nova X", "📄 Processing PDF...");
+        const formData = new FormData();
+        formData.append("pdf", file);
+
+        try {
+            const response = await fetch("https://nova-x-v2-backend.onrender.com/upload/pdf", {
+                method: "POST",
+                body: formData
+            });
+            const result = await response.json();
+            if (result.text) {
+                const summaryPrompt = `Summarize this PDF:\n\n${result.text.slice(0, 3000)}`;
+                const chatRes = await fetch(backendURL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: summaryPrompt })
+                });
+                const chatData = await chatRes.json();
+                addMessage("Nova X", chatData.response);
+            } else {
+                addMessage("Nova X", "❌ No text found in PDF.");
+            }
+        } catch {
+            addMessage("Nova X", "❌ Error processing the PDF.");
+        }
+    }
+
+    async function processImage(file) {
+        addMessage("Nova X", "🖼️ Analyzing image...");
+        const formData = new FormData();
+        formData.append("image", file);
+
+        try {
+            const response = await fetch("https://nova-x-v2-backend.onrender.com/upload/image", {
+                method: "POST",
+                body: formData
+            });
+            const result = await response.json();
+            if (result.text) {
+                const summaryPrompt = `Summarize or describe this image content:\n\n${result.text}`;
+                const chatRes = await fetch(backendURL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: summaryPrompt })
+                });
+                const chatData = await chatRes.json();
+                addMessage("Nova X", chatData.response);
+            } else {
+                addMessage("Nova X", "❌ No text detected in image.");
+            }
+        } catch {
+            addMessage("Nova X", "❌ Error processing image.");
+        }
+    }
 });
