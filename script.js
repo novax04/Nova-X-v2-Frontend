@@ -284,6 +284,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
+function appendMessage(role, text) {
+  const chatContainer = document.getElementById('chat-container');
+  const messageDiv = document.createElement('div');
+  messageDiv.classList.add('message', role === 'user' ? 'user-message' : 'bot-message');
+  messageDiv.innerHTML = `<strong>${role === 'user' ? 'You' : 'Nova X'}:</strong> ${text}`;
+  chatContainer.appendChild(messageDiv);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+// === Image OCR + Summary ===
+document.getElementById('analyze-image-button').addEventListener('click', async () => {
+  // your image analysis code
+});
+
 // === Image OCR + Summary ===
 document.getElementById('analyze-image-button').addEventListener('click', async () => {
   const input = document.createElement('input');
