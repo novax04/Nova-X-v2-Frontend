@@ -447,3 +447,19 @@ li button {
 #close-assistant:hover {
   color: #fff;
 }
+#analyze-image-button {
+  width: 100%;
+  padding: 8px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  margin-top: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#analyze-image-button:hover {
+  background-color: #218838;
+}
