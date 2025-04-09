@@ -25,12 +25,12 @@
       <!-- Text input -->
       <input type="text" id="user-input" placeholder="Type a message..." />
 
-      <!-- 📎 Attachment Button for PDF -->
+      <!-- 📎 Unified Attachment Button for PDF & Image -->
       <div class="attachment-wrapper">
-        <label for="pdf-upload" class="attachment-button" title="Attach PDF">
+        <label for="file-input" class="attachment-button" title="Attach PDF or Image">
           <i class="fas fa-paperclip"></i>
         </label>
-        <input type="file" id="pdf-upload" accept="application/pdf" hidden />
+        <input type="file" id="file-input" accept=".pdf,image/*" hidden />
       </div>
 
       <!-- Microphone -->
@@ -59,17 +59,16 @@
   <div id="help-panel">
     <h2>How to Use Nova X</h2>
     <ul>
-  	<li><strong>Chat:</strong> Type your question and hit Enter or click Send.</li>
-  	<li><strong>Voice Input:</strong> Click the 🎙️ mic button and speak.</li>
-  	<li><strong>PDF Summarizer:</strong> Click 📎 (Attach) to upload a PDF. Nova X will summarize it.</li>
-  	<li><strong>Search the Web:</strong> Type <code>search your query</code> to get web results via DuckDuckGo.</li>
-  	<li><strong>News by Country:</strong> Say <code>news in India</code> or any other country.</li>
-  	<li><strong>News by Topic:</strong> Try <code>news about AI</code> for specific topics.</li>
-  	<li><strong>Task:</strong> Add tasks using <code>add task Buy groceries</code>. Manage them in the Tasks tab.</li>
-  	<li><strong>Reminder:</strong> Set reminders like <code>remind me to call John at 5pm</code></li>
-  	<li><strong>Weather by City:</strong> Say <code>weather in Tokyo</code> or just <code>weather</code> for your current location.</li>
-</ul>
-
+      <li><strong>Chat:</strong> Type your question and hit Enter or click Send.</li>
+      <li><strong>Voice Input:</strong> Click the 🎙️ mic button and speak.</li>
+      <li><strong>PDF/Image Summarizer:</strong> Click 📎 (Attach) to upload a PDF or image. Nova X will analyze it.</li>
+      <li><strong>Search the Web:</strong> Type <code>search your query</code> to get web results via DuckDuckGo.</li>
+      <li><strong>News by Country:</strong> Say <code>news in India</code> or any other country.</li>
+      <li><strong>News by Topic:</strong> Try <code>news about AI</code> for specific topics.</li>
+      <li><strong>Task:</strong> Add tasks using <code>add task Buy groceries</code>. Manage them in the Tasks tab.</li>
+      <li><strong>Reminder:</strong> Set reminders like <code>remind me to call John at 5pm</code></li>
+      <li><strong>Weather by City:</strong> Say <code>weather in Tokyo</code> or just <code>weather</code> for your current location.</li>
+    </ul>
   </div>
 
   <!-- Assistant Panel Toggle -->
