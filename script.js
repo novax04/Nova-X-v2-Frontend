@@ -84,8 +84,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    async function sendMessage() {
-        const message = userInput.value.trim();
+    async function sendMessage(msgOverride = null) {
+        const message = msgOverride || userInput.value.trim();
         if (!message) return;
         addMessage("You", message, "user-message");
         userInput.value = "";
@@ -163,7 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function searchWeb(query) {
-        const res = await fetch("https://nova-x-7akw.onrender.com/search-web", {
+        const res = await fetch(`${backendURL}/search-web`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ query })
@@ -210,7 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchNewsByCountry(country) {
         try {
-            const res = await fetch(`https://nova-x-7akw.onrender.com/news/country?country=${country}`);
+            const res = await fetch(`${backendURL}/news/country?country=${country}`);
             const data = await res.json();
             addMessage("Nova X", data.response);
         } catch {
@@ -220,7 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchNewsByTopic(topic) {
         try {
-            const res = await fetch(`https://nova-x-7akw.onrender.com/news/topic?topic=${topic}`);
+            const res = await fetch(`${backendURL}/news/topic?topic=${topic}`);
             const data = await res.json();
             addMessage("Nova X", data.response);
         } catch {
@@ -241,7 +241,7 @@ document.addEventListener("DOMContentLoaded", () => {
         formData.append("pdf", file);
 
         try {
-            const response = await fetch("https://nova-x-7akw.onrender.com/pdf", {
+            const response = await fetch(`${backendURL}/pdf`, {
                 method: "POST",
                 body: formData,
             });
