@@ -21,14 +21,19 @@
     <div class="input-container">
       <input type="text" id="user-input" placeholder="Type a message..." />
 
+      <!-- 📎 Attachment Button with Dropdown Modal -->
       <div class="attachment-wrapper">
-        <button id="attachment-button" class="attachment-button" title="Upload">
+        <div id="attachment-button" class="attachment-button" title="Upload">
           <i class="fas fa-paperclip"></i>
-        </button>
-        <input type="file" id="pdf-upload" hidden />
-        <input type="file" id="image-upload" accept="image/*" hidden />
+          <div id="file-select-modal" class="file-select-modal hidden">
+            <p>Select File Type</p>
+            <button id="select-pdf">Upload PDF</button>
+            <button id="select-image">Upload Image</button>
+          </div>
+        </div>
       </div>
 
+      <!-- 🎙️ Voice Input -->
       <div class="mic-wrapper">
         <button id="mic-button"><i class="fas fa-microphone"></i></button>
         <div class="waveform hidden" id="waveform">
@@ -40,6 +45,7 @@
     </div>
   </div>
 
+  <!-- ❔ Help Panel -->
   <button id="help-button" title="Help">❔</button>
   <div id="help-panel" class="hidden">
     <h2>How to Use Nova X</h2>
@@ -55,14 +61,7 @@
     </ul>
   </div>
 
-  <div id="file-select-modal" class="modal hidden">
-    <div class="modal-content">
-      <h3>Select File Type</h3>
-      <button id="select-pdf">Upload PDF</button>
-      <button id="select-image">Upload Image</button>
-    </div>
-  </div>
-
+  <!-- ✅ Assistant Panel (Tasks + Reminders) -->
   <button id="todo-panel-toggle">Tasks</button>
 
   <div id="assistant-panel" class="hidden">
