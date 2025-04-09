@@ -1,4 +1,4 @@
-const backendURL = "https://nova-x-v2-backend.onrender.comk";
+const backendURL = "https://nova-x-v2-backend.onrender.com";
 
 function showTab(tabName) {
     document.querySelectorAll(".panel-section").forEach(panel => {
