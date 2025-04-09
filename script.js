@@ -284,33 +284,51 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
-// 📷 Image Analyzer from Assistant Panel
-document.getElementById("analyze-image-button").addEventListener("click", () => {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-  input.onchange = async () => {
-    const file = input.files[0];
+// === Image OCR + Summary ===
+document.getElementById('analyze-image-button').addEventListener('click', async () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+
+  input.onchange = async (event) => {
+    const file = event.target.files[0];
     if (!file) return;
 
-    addMessage("Nova X", "🖼️ Analyzing image...");
+    appendMessage('user', '📷 Analyzing image, please wait...');
 
     try {
-      const { data: { text } } = await Tesseract.recognize(file, "eng");
-      const summaryPrompt = `Summarize this image content:\n\n${text}`;
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const imageDataUrl = reader.result;
 
-      const chatRes = await fetch("https://nova-x-v2-backend.onrender.com/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: summaryPrompt })
-      });
+        // OCR with Tesseract.js
+        const { createWorker } = Tesseract;
+        const worker = await createWorker();
+        await worker.loadLanguage('eng');
+        await worker.initialize('eng');
+        const { data: { text } } = await worker.recognize(imageDataUrl);
+        await worker.terminate();
 
-      const data = await chatRes.json();
-      addMessage("Nova X", data.response);
-    } catch (err) {
-      console.error(err);
-      addMessage("Nova X", "❌ Failed to extract or summarize image.");
+        appendMessage('user', `📝 Extracted Text: "${text.trim()}"`);
+        
+        // Send to backend for summarization
+        const res = await fetch('https://nova-x-v2-backend.onrender.com/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ message: `Summarize this: ${text}` })
+        });
+
+        const data = await res.json();
+        appendMessage('bot', data.response);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Image OCR Error:', error);
+      appendMessage('bot', '❌ Error analyzing image.');
     }
   };
+
   input.click();
 });
