@@ -447,24 +447,3 @@ li button {
 #close-assistant:hover {
   color: #fff;
 }
-.file-select-modal {
-  position: absolute;
-  bottom: 45px;
-  background: #1e1e1e;
-  border: 1px solid #555;
-  padding: 10px;
-  border-radius: 8px;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  color: white;
-}
-
-.file-select-modal.hidden {
-  display: none;
-}
-
-.attachment-wrapper {
-  position: relative;
-}
