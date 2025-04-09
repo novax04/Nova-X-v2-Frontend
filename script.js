@@ -189,3 +189,80 @@ document.addEventListener("DOMContentLoaded", () => {
     input.value = "";
   });
 });
+// 📎 Toggle file select modal
+const attachmentBtn = document.getElementById("attachment-button");
+const fileModal = document.getElementById("file-select-modal");
+const selectPDF = document.getElementById("select-pdf");
+const selectImage = document.getElementById("select-image");
+
+attachmentBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  fileModal.classList.toggle("hidden");
+});
+
+document.addEventListener("click", (e) => {
+  if (!attachmentBtn.contains(e.target)) {
+    fileModal.classList.add("hidden");
+  }
+});
+
+// 📄 PDF Upload
+selectPDF.addEventListener("click", () => {
+  fileModal.classList.add("hidden");
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/pdf";
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("pdf", file);
+    addMessage("Nova X", "📄 Processing PDF...");
+    try {
+      const res = await fetch("https://nova-x-v2-backend.onrender.com/pdf", {
+        method: "POST",
+        body: formData
+      });
+      const result = await res.json();
+      const summaryPrompt = `Summarize this PDF:\n\n${result.text.slice(0, 3000)}`;
+      const chatRes = await fetch("https://nova-x-v2-backend.onrender.com/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: summaryPrompt })
+      });
+      const data = await chatRes.json();
+      addMessage("Nova X", data.response);
+    } catch {
+      addMessage("Nova X", "❌ Failed to process PDF.");
+    }
+  };
+  input.click();
+});
+
+// 🖼️ Image Upload
+selectImage.addEventListener("click", () => {
+  fileModal.classList.add("hidden");
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    addMessage("Nova X", "🖼️ Extracting text from image...");
+    try {
+      const { data: { text } } = await Tesseract.recognize(file, 'eng');
+      const summaryPrompt = `Analyze this image:\n\n${text}`;
+      const chatRes = await fetch("https://nova-x-v2-backend.onrender.com/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: summaryPrompt })
+      });
+      const data = await chatRes.json();
+      addMessage("Nova X", data.response);
+    } catch {
+      addMessage("Nova X", "❌ OCR failed.");
+    }
+  };
+  input.click();
+});
+
